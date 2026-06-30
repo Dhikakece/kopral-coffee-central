@@ -38,7 +38,7 @@
         </div>
     </main>
 
-    <audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2869/2869-84.wav" preload="auto"></audio>
+    <audio id="notif-sound" src="notification.mp3" preload="auto"></audio>
 
     <script>
         // ========================================================
@@ -64,7 +64,7 @@
         socket.on('notifikasi-pesanan-baru', (pesanan) => {
             // Bunyikan Suara Alert Kasir
             const audio = document.getElementById('notif-sound');
-            audio.play().catch(e => console.log("Izin audio browser aktif"));
+            audio.play().catch(e => console.log("Menunggu interaksi awal pengguna untuk memutar audio. Klik layar terlebih dahulu."));
 
             document.getElementById('pesan-kosong').classList.add('hidden');
             totalPesanan++;
