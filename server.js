@@ -16,9 +16,17 @@ const io = new Server(server, {
 
 // Middleware untuk membaca data JSON dan mengizinkan akses lintas domain (CORS)
 app.use(express.json());
+
+// UBAH DI BAGIAN INI: Mengizinkan metode OPTIONS, GET, POST agar aman dari blokir browser lokal
 app.use((req, res, next) => {
     res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS"); // Tambahan izin metode
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+    
+    // Jika browser mengirimkan preflight (OPTIONS), langsung jawab dengan status 200 sukses
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
     next();
 });
 
