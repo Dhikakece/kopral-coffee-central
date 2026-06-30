@@ -1,0 +1,13 @@
+{
+  "name": "kopral-coffee-kasir-server",
+  "version": "1.0.0",
+  "description": "Server Backend dan Monitor Kasir Real-time Cloud",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  }
+}
