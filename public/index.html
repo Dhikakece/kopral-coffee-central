@@ -30,11 +30,23 @@
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-sm font-bold text-slate-400">Riwayat Pesanan</h3>
-                        <button onclick="clearSelesai()" class="text-[10px] bg-red-600/20 text-red-400 px-3 py-1 rounded-lg border border-red-900">Hapus Semua</button>
+                        <h3 class="text-sm font-bold text-slate-400">Riwayat Pesanan (Data 30 Hari)</h3>
+                        <button onclick="clearSelesai()" class="text-[10px] bg-red-600/20 text-red-400 px-3 py-1 rounded-lg border border-red-900">Pembersihan Otomatis</button>
                     </div>
                     <div id="container-riwayat" class="space-y-2 max-h-60 overflow-y-auto pr-2 text-xs"></div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="fixed inset-0 bg-black/70 z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl max-w-sm w-full text-center">
+            <i class="fas fa-trash-alt text-red-500 text-4xl mb-4"></i>
+            <h3 class="text-white font-bold text-lg mb-2">Hapus Riwayat Lama?</h3>
+            <p class="text-slate-400 text-sm mb-6">Hanya pesanan berusia > 30 hari yang akan dihapus.</p>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="hideConfirm()" class="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl font-bold">Batal</button>
+                <button onclick="executeClear()" class="bg-red-600 hover:bg-red-500 text-white py-2 rounded-xl font-bold">Lanjutkan</button>
             </div>
         </div>
     </div>
@@ -58,6 +70,27 @@
         function toggleSound() {
             isSoundEnabled = !isSoundEnabled;
             document.getElementById('toggle-sound').innerText = isSoundEnabled ? "Aktif" : "Mati";
+        }
+
+        // Fungsi Popup Konfirmasi
+        function clearSelesai() { document.getElementById('confirm-modal').classList.remove('hidden'); }
+        function hideConfirm() { document.getElementById('confirm-modal').classList.add('hidden'); }
+        
+        function executeClear() { 
+            const container = document.getElementById('container-riwayat');
+            const now = new Date().getTime();
+            const limit = 30 * 24 * 60 * 60 * 1000;
+            let count = 0;
+
+            Array.from(container.children).forEach(card => {
+                const time = parseInt(card.getAttribute('data-time'));
+                if (now - time > limit || isNaN(time)) {
+                    card.remove();
+                    count++;
+                }
+            });
+            alert(count > 0 ? `${count} data lama berhasil dihapus.` : "Tidak ada data yang berusia lebih dari 30 hari.");
+            hideConfirm();
         }
 
         socket.on('notifikasi-pesanan-baru', (pesanan) => {
@@ -94,11 +127,13 @@
             const card = document.getElementById(id);
             card.classList.remove('animate-pulse');
             card.querySelector('.grid').remove();
+            
+            // Tambah Timestamp
+            const now = new Date();
+            card.setAttribute('data-time', now.getTime());
+            card.innerHTML += `<div class="mt-3 text-[10px] text-slate-500 font-mono italic">Selesai: ${now.toLocaleString('id-ID')}</div>`;
+            
             document.getElementById('container-riwayat').prepend(card);
-        }
-
-        function clearSelesai() {
-            if(confirm('Hapus semua riwayat?')) document.getElementById('container-riwayat').innerHTML = '';
         }
     </script>
 </body>
