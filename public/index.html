@@ -15,7 +15,7 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
         
-        /* Memaksa area riwayat hanya fokus pada scroll vertikal */
+        /* Mencegah pull-to-refresh dan mengunci scroll di area riwayat */
         #container-riwayat {
             touch-action: pan-y;
             overscroll-behavior-y: contain;
@@ -72,7 +72,17 @@
         let socket;
         let activeOrders = JSON.parse(localStorage.getItem('kopral_active_orders') || '{}');
 
-        window.onload = () => { renderActiveOrders(); };
+        window.onload = () => { 
+            renderActiveOrders(); 
+            
+            // Script tambahan untuk mengunci scroll agar tidak refresh halaman
+            const containerRiwayat = document.getElementById('container-riwayat');
+            if (containerRiwayat) {
+                containerRiwayat.addEventListener('touchstart', function(e) {
+                    if (this.scrollTop === 0) this.scrollTop = 1;
+                }, { passive: false });
+            }
+        };
 
         function renderActiveOrders() {
             const container = document.getElementById('container-antrean');
@@ -129,6 +139,7 @@
             document.getElementById('container-antrean').prepend(div);
         }
 
+        // ... (fungsi lainnya seperti prosesPesanan, selesaiPesanan, dll. tetap sama)
         function prosesPesanan(id) {
             const btnProses = document.getElementById(`btn-proses-${id}`);
             const btnSelesai = document.getElementById(`btn-selesai-${id}`);
