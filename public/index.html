@@ -3,130 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KOPRAL COFFEE - Android & Web POS Monitor</title>
+    <title>KOPRAL POS MONITOR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
-<body class="bg-slate-900 text-slate-100 font-sans min-h-screen select-none">
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
-    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center shadow-md sticky top-0 z-50">
-        <div class="flex items-center gap-3">
-            <div class="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-            <h1 class="text-base font-bold tracking-wider text-white">KOPRAL POS <span class="text-amber-400">MONITOR</span></h1>
-        </div>
-        <div class="text-xs font-mono text-slate-400" id="live-clock">00:00:00 WIB</div>
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center shadow-md">
+        <h1 class="text-base font-bold text-white">KOPRAL <span class="text-amber-400">POS V2</span></h1>
+        <button onclick="toggleModal(true)" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition">
+            <i class="fas fa-cog mr-1"></i> Pengaturan & Riwayat
+        </button>
     </header>
 
-    <div class="px-6 py-3 flex gap-4">
-        <button id="toggle-sound" class="bg-blue-600 px-4 py-2 rounded-full text-xs font-bold shadow-lg transition hover:bg-blue-500">
-            <i class="fas fa-volume-up mr-1"></i> Suara: Aktif
-        </button>
+    <div id="modal" class="fixed inset-0 bg-slate-950/90 z-50 hidden p-4 overflow-y-auto">
+        <div class="max-w-2xl mx-auto bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-white">Pengaturan & Riwayat</h2>
+                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-white text-xl">✕</button>
+            </div>
+            
+            <div class="space-y-6">
+                <div class="flex items-center justify-between p-4 bg-slate-900 rounded-xl">
+                    <span class="font-medium">Notifikasi Suara</span>
+                    <button id="toggle-sound" onclick="toggleSound()" class="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">Aktif</button>
+                </div>
+
+                <div>
+                    <div class="flex justify-between items-center mb-3">
+                        <h3 class="font-bold text-slate-400">Riwayat Selesai</h3>
+                        <button onclick="clearSelesai()" class="text-[10px] bg-red-600/20 text-red-400 px-3 py-1 rounded-lg border border-red-900 hover:bg-red-600 hover:text-white transition">
+                            <i class="fas fa-trash mr-1"></i> Hapus Semua Riwayat
+                        </button>
+                    </div>
+                    <div id="container-riwayat" class="space-y-2 max-h-60 overflow-y-auto pr-2"></div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <main class="p-6 max-w-7xl mx-auto">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold flex items-center gap-2">
-                <i class="fas fa-receipt text-amber-400"></i> Antrean Pesanan Masuk
-                <span id="order-count" class="bg-amber-500 text-slate-950 text-xs font-black px-2.5 py-1 rounded-full ml-2">0</span>
-            </h2>
-            <button onclick="clearSelesai()" class="text-xs bg-slate-800 border border-slate-700 px-3 py-2 rounded-xl hover:bg-slate-700 transition">
-                <i class="fas fa-check-double mr-1"></i> Bersihkan Riwayat
-            </button>
-        </div>
-
+        <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+            <i class="fas fa-receipt text-amber-400"></i> Antrean Aktif
+            <span id="order-count" class="bg-amber-500 text-slate-950 text-xs px-2 py-0.5 rounded-full">0</span>
+        </h2>
         <div id="container-antrean" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div id="pesan-kosong" class="col-span-full text-center py-20 text-slate-500">
-                <i class="fas fa-coffee text-5xl mb-3 block"></i>
-                <p class="text-base font-medium">Belum ada pesanan masuk.</p>
-            </div>
-        </div>
-
-        <div class="mt-16 border-t border-slate-800 pt-8">
-            <h2 class="text-lg font-bold mb-4 text-slate-400"><i class="fas fa-history mr-2"></i> Riwayat Pesanan Selesai</h2>
-            <div id="container-riwayat" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-70"></div>
+            <div id="pesan-kosong" class="col-span-full text-center py-20 text-slate-500">Belum ada pesanan masuk.</div>
         </div>
     </main>
 
     <audio id="notif-sound" src="notification.mp3" preload="auto"></audio>
 
     <script>
-        const RENDER_PROJECT_NAME = "kopral-coffee-central";
-        const SERVER_URL = window.location.origin.includes('localhost') || window.location.origin.includes('file://')
-            ? "http://localhost:3000"
-            : `https://${RENDER_PROJECT_NAME}.onrender.com`;
-        
-        const socket = io(SERVER_URL);
-        let totalPesanan = 0;
+        const socket = io("https://kopral-coffee-central.onrender.com");
         let isSoundEnabled = true;
 
-        // Toggle Suara
-        document.getElementById('toggle-sound').addEventListener('click', function() {
+        function toggleModal(show) { document.getElementById('modal').classList.toggle('hidden', !show); }
+
+        function toggleSound() {
             isSoundEnabled = !isSoundEnabled;
-            this.innerHTML = isSoundEnabled 
-                ? '<i class="fas fa-volume-up mr-1"></i> Suara: Aktif' 
-                : '<i class="fas fa-volume-mute mr-1"></i> Suara: Mati';
-            this.className = isSoundEnabled ? "bg-blue-600 px-4 py-2 rounded-full text-xs font-bold shadow-lg transition" : "bg-slate-600 px-4 py-2 rounded-full text-xs font-bold shadow-lg transition";
-        });
+            const btn = document.getElementById('toggle-sound');
+            btn.innerText = isSoundEnabled ? "Aktif" : "Mati";
+            btn.className = isSoundEnabled ? "bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold" : "bg-slate-600 px-4 py-2 rounded-lg text-xs font-bold";
+        }
 
         socket.on('notifikasi-pesanan-baru', (pesanan) => {
-            if (isSoundEnabled) {
-                document.getElementById('notif-sound').play().catch(e => console.log("Menunggu interaksi pengguna"));
-            }
-
+            if (isSoundEnabled) document.getElementById('notif-sound').play().catch(()=>{});
             document.getElementById('pesan-kosong').classList.add('hidden');
-            totalPesanan++;
-            document.getElementById('order-count').innerText = totalPesanan;
-
-            const container = document.getElementById('container-antrean');
-            let itemsHTML = pesanan.items.map(item => `
-                <div class="flex justify-between py-1 text-sm text-slate-300">
-                    <span>${item.name} x${item.quantity}</span>
-                    <span>Rp ${(item.price * item.quantity).toLocaleString('id-ID')}</span>
-                </div>
-            `).join('');
-
-            const cardHTML = `
-                <div id="${pesanan.id_pesanan}" class="bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-xl animate-pulse">
-                    <div class="flex justify-between mb-2">
-                        <span class="bg-amber-400 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded uppercase">${pesanan.metode}</span>
-                        <span class="text-xs bg-slate-700 px-2 py-1 rounded">MEJA ${pesanan.meja}</span>
-                    </div>
-                    <h3 class="font-bold text-white mb-2">${pesanan.nama}</h3>
-                    <div class="my-3 bg-slate-900/40 rounded-xl p-3">${itemsHTML}</div>
-                    <p class="font-black text-emerald-400 mb-4">Total: Rp ${pesanan.total.toLocaleString('id-ID')}</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="prosesPesanan('${pesanan.id_pesanan}')" id="btn-proses-${pesanan.id_pesanan}" class="bg-amber-500 text-slate-950 text-xs font-bold py-2 rounded-xl">Proses</button>
-                        <button onclick="selesaiPesanan('${pesanan.id_pesanan}')" id="btn-selesai-${pesanan.id_pesanan}" disabled class="bg-slate-700 text-slate-500 text-xs font-bold py-2 rounded-xl">Selesai</button>
-                    </div>
-                </div>
-            `;
-            container.insertAdjacentHTML('afterbegin', cardHTML);
+            
+            const div = document.createElement('div');
+            div.id = pesanan.id_pesanan;
+            div.className = "bg-slate-800 border border-slate-700 p-4 rounded-2xl animate-pulse";
+            div.innerHTML = `<h3 class="font-bold">${pesanan.nama} - Meja ${pesanan.meja}</h3>
+                             <button onclick="selesaiPesanan('${pesanan.id_pesanan}')" class="mt-3 bg-emerald-600 w-full py-2 rounded-lg text-xs font-bold">Selesai</button>`;
+            document.getElementById('container-antrean').prepend(div);
+            updateCount(1);
         });
-
-        function prosesPesanan(id) {
-            const btnProses = document.getElementById(`btn-proses-${id}`);
-            btnProses.className = "bg-blue-600 text-white text-xs font-bold py-2 rounded-xl cursor-not-allowed";
-            btnProses.innerText = "Dibuat...";
-            document.getElementById(`btn-selesai-${id}`).disabled = false;
-            document.getElementById(`btn-selesai-${id}`).className = "bg-emerald-600 text-white text-xs font-bold py-2 rounded-xl";
-        }
 
         function selesaiPesanan(id) {
             const card = document.getElementById(id);
-            const riwayatContainer = document.getElementById('container-riwayat');
-            
-            // Pindahkan ke riwayat
+            const riwayat = document.getElementById('container-riwayat');
             card.classList.remove('animate-pulse');
-            card.querySelector('.grid').remove();
-            riwayatContainer.prepend(card);
+            card.querySelector('button').remove();
+            riwayat.prepend(card);
+            updateCount(-1);
+        }
 
-            totalPesanan--;
-            document.getElementById('order-count').innerText = totalPesanan;
+        function updateCount(val) {
+            const el = document.getElementById('order-count');
+            el.innerText = parseInt(el.innerText) + val;
         }
 
         function clearSelesai() {
-            document.getElementById('container-riwayat').innerHTML = '';
+            if(confirm('Hapus semua riwayat?')) document.getElementById('container-riwayat').innerHTML = '';
         }
     </script>
 </body>
