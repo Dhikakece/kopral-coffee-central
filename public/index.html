@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>KOPRAL POS MONITOR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -15,7 +15,11 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
         
-        /* Mencegah pull-to-refresh dan mengunci scroll di area riwayat */
+        /* Mencegah sistem refresh pada aplikasi */
+        html, body {
+            overscroll-behavior-y: none;
+        }
+
         #container-riwayat {
             touch-action: pan-y;
             overscroll-behavior-y: contain;
@@ -75,7 +79,7 @@
         window.onload = () => { 
             renderActiveOrders(); 
             
-            // Script tambahan untuk mengunci scroll agar tidak refresh halaman
+            // Kunci scroll agar tidak refresh saat di atas
             const containerRiwayat = document.getElementById('container-riwayat');
             if (containerRiwayat) {
                 containerRiwayat.addEventListener('touchstart', function(e) {
@@ -139,7 +143,6 @@
             document.getElementById('container-antrean').prepend(div);
         }
 
-        // ... (fungsi lainnya seperti prosesPesanan, selesaiPesanan, dll. tetap sama)
         function prosesPesanan(id) {
             const btnProses = document.getElementById(`btn-proses-${id}`);
             const btnSelesai = document.getElementById(`btn-selesai-${id}`);
