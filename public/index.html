@@ -2,10 +2,15 @@
     const socket = io("https://kopral-coffee-central.onrender.com");
     let isSoundEnabled = true;
 
-    // --- FUNGSI LAPORAN (Fix deteksi Non-Coffee) ---
+    // --- FUNGSI LAPORAN ---
     function tampilkanLaporan() {
         const container = document.getElementById('container-riwayat');
-        const selectedDate = document.getElementById('search-date').value || new Date().toISOString().split('T')[0];
+        const searchDate = document.getElementById('search-date');
+        const reportModal = document.getElementById('report-modal');
+        
+        if (!container || !reportModal) return; // Mencegah error jika elemen hilang
+
+        const selectedDate = searchDate.value || new Date().toISOString().split('T')[0];
         let stats = { "Coffee": { qty: 0, price: 0 }, "Non-Coffee": { qty: 0, price: 0 }, "Snack": { qty: 0, price: 0 } };
 
         Array.from(container.children).forEach(card => {
@@ -17,9 +22,8 @@
                 const items = card.querySelectorAll('.flex.justify-between.py-1');
                 items.forEach(item => {
                     const text = item.innerText;
-                    // Ambil harga dan qty dengan regex yang lebih akurat
                     const priceMatch = text.match(/Rp\s?([\d.,]+)/);
-                    const price = priceMatch ? parseInt(priceMatch[1].replace(/\./g, '')) : 0;
+                    const price = priceMatch ? parseInt(priceMatch[1].replace(/\./g, '').replace(/,/g, '')) : 0;
                     const qtyMatch = text.match(/x(\d+)/);
                     const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
                     
@@ -49,16 +53,19 @@
                 <span>Rp ${(stats.Coffee.price + stats['Non-Coffee'].price + stats.Snack.price).toLocaleString()}</span>
             </div>
         `;
-        document.getElementById('report-modal').classList.remove('hidden');
+        reportModal.classList.remove('hidden');
     }
 
-    // --- FUNGSI CETAK PDF (Grouping Item Sama) ---
+    // --- FUNGSI CETAK PDF ---
     function cetakPDF() {
+        if (typeof window.jspdf === 'undefined') {
+            alert("Library PDF belum dimuat, tunggu sebentar.");
+            return;
+        }
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         const selectedDate = document.getElementById('search-date').value || new Date().toISOString().split('T')[0];
-        
-        let consolidated = {}; // Objek untuk menampung total per item
+        let consolidated = {};
 
         Array.from(document.getElementById('container-riwayat').children).forEach(card => {
             const cardTime = parseInt(card.getAttribute('data-time'));
@@ -68,7 +75,8 @@
                     const parts = text.split('x');
                     const name = parts[0].trim();
                     const qty = parseInt(parts[1]) || 1;
-                    const price = parseInt(text.split('Rp')[1].replace(/[^0-9]/g, ''));
+                    const priceStr = text.split('Rp')[1];
+                    const price = priceStr ? parseInt(priceStr.replace(/[^0-9]/g, '')) : 0;
 
                     if (!consolidated[name]) {
                         consolidated[name] = { qty: 0, total: 0, unitPrice: price / qty };
@@ -80,32 +88,25 @@
         });
 
         const tableBody = Object.keys(consolidated).map(name => [
-            name, 
-            consolidated[name].qty, 
+            name, consolidated[name].qty, 
             `Rp ${consolidated[name].unitPrice.toLocaleString()}`, 
             `Rp ${consolidated[name].total.toLocaleString()}`
         ]);
 
-        doc.setFontSize(18);
         doc.text("Laporan Penjualan KOPRAL", 14, 20);
-        doc.setFontSize(12);
         doc.text(`Tanggal: ${selectedDate}`, 14, 30);
-        
-        doc.autoTable({
-            startY: 40,
-            head: [['Nama Item', 'Qty', 'Harga Satuan', 'Total']],
-            body: tableBody,
-        });
-        
+        doc.autoTable({ startY: 40, head: [['Nama Item', 'Qty', 'Harga Satuan', 'Total']], body: tableBody });
         doc.save(`Laporan_${selectedDate}.pdf`);
     }
 
-    // --- FUNGSI PENDUKUNG LAINNYA ---
+    // --- INIT ---
     window.onload = () => {
         const savedRiwayat = localStorage.getItem('kopral_riwayat');
         if (savedRiwayat) {
-            document.getElementById('container-riwayat').innerHTML = savedRiwayat;
-            if (savedRiwayat.trim() !== "") document.getElementById('pesan-kosong').classList.add('hidden');
+            const container = document.getElementById('container-riwayat');
+            const pesanKosong = document.getElementById('pesan-kosong');
+            if(container) container.innerHTML = savedRiwayat;
+            if(savedRiwayat.trim() !== "" && pesanKosong) pesanKosong.classList.add('hidden');
         }
     };
 
