@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
@@ -43,6 +45,17 @@
         </div>
     </div>
 
+    <div id="report-modal" class="fixed inset-0 bg-black/80 z-[70] hidden flex items-center justify-center p-4">
+        <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl max-w-sm w-full">
+            <h3 id="report-title" class="text-white font-bold text-lg mb-4 text-center">Laporan Penjualan</h3>
+            <div id="report-content" class="space-y-3 text-sm text-slate-300"></div>
+            <div class="grid grid-cols-2 gap-3 mt-6">
+                <button onclick="document.getElementById('report-modal').classList.add('hidden')" class="bg-slate-700 py-3 rounded-2xl font-bold text-white hover:bg-slate-600">Tutup</button>
+                <button onclick="cetakPDF()" class="bg-amber-600 py-3 rounded-2xl font-bold text-slate-900 hover:bg-amber-500">Cetak PDF</button>
+            </div>
+        </div>
+    </div>
+
     <div id="confirm-modal" class="fixed inset-0 bg-black/70 z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl max-w-sm w-full text-center">
             <i class="fas fa-trash-alt text-red-500 text-4xl mb-4"></i>
@@ -69,7 +82,33 @@
         const socket = io("https://kopral-coffee-central.onrender.com");
         let isSoundEnabled = true;
 
-        // ... (Fungsi existing tetap sama) ...
+        // Fungsi Cetak PDF
+        function cetakPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const selectedDate = document.getElementById('search-date').value || new Date().toISOString().split('T')[0];
+            
+            doc.setFontSize(18);
+            doc.text("Laporan Penjualan KOPRAL", 14, 20);
+            doc.setFontSize(12);
+            doc.text(`Tanggal: ${selectedDate}`, 14, 30);
+
+            const tableData = [];
+            Array.from(document.getElementById('container-riwayat').children).forEach(card => {
+                const cardTime = parseInt(card.getAttribute('data-time'));
+                const cardDate = new Date(cardTime).toISOString().split('T')[0];
+                if (cardDate === selectedDate) {
+                    card.querySelectorAll('.flex.justify-between.py-1').forEach(item => {
+                        tableData.push([item.innerText.split('x')[0].trim(), item.innerText.split('Rp')[1].trim()]);
+                    });
+                }
+            });
+
+            doc.autoTable({ startY: 40, head: [['Nama Item', 'Harga (Rp)']], body: tableData });
+            doc.save(`Laporan_${selectedDate}.pdf`);
+        }
+
+        // ... (Fungsi lainnya tetap sama) ...
         window.onload = () => {
             const savedRiwayat = localStorage.getItem('kopral_riwayat');
             if (savedRiwayat) {
@@ -80,6 +119,7 @@
 
         function toggleModal(show) { document.getElementById('modal').classList.toggle('hidden', !show); }
         function toggleSound() { isSoundEnabled = !isSoundEnabled; document.getElementById('toggle-sound').innerText = isSoundEnabled ? "Aktif" : "Mati"; }
+        
         function filterRiwayat() {
             const selectedDate = document.getElementById('search-date').value;
             const container = document.getElementById('container-riwayat');
@@ -91,11 +131,10 @@
             });
         }
 
-        // FUNGSI LAPORAN BARU
         function tampilkanLaporan() {
             const container = document.getElementById('container-riwayat');
             const selectedDate = document.getElementById('search-date').value || new Date().toISOString().split('T')[0];
-            let stats = { "Coffee": 0, "Non-Coffee": 0, "Snack": 0 };
+            let stats = { "Coffee": { qty: 0, price: 0 }, "Non-Coffee": { qty: 0, price: 0 }, "Snack": { qty: 0, price: 0 } };
 
             Array.from(container.children).forEach(card => {
                 const cardTime = parseInt(card.getAttribute('data-time'));
@@ -103,22 +142,44 @@
                 const cardDate = new Date(cardTime).toISOString().split('T')[0];
                 
                 if (cardDate === selectedDate) {
-                    const cardHTML = card.innerHTML;
-                    if (cardHTML.match(/Kopi|Latte|Espresso|Americano/i)) stats["Coffee"] += 1;
-                    else if (cardHTML.match(/Tea|Choco|Matcha|Milk/i)) stats["Non-Coffee"] += 1;
-                    else stats["Snack"] += 1;
+                    const items = card.querySelectorAll('.flex.justify-between.py-1');
+                    const totalMatch = card.querySelector('.text-amber-400 span:last-child');
+                    const totalHargaCard = totalMatch ? parseInt(totalMatch.innerText.replace(/[^0-9]/g, '')) : 0;
+
+                    items.forEach(item => {
+                        const text = item.innerText;
+                        let category = "Snack";
+                        if (text.match(/Kopi|Latte|Espresso|Americano/i)) category = "Coffee";
+                        else if (text.match(/Tea|Choco|Matcha|Milk/i)) category = "Non-Coffee";
+                        const qty = parseInt(text.split('x')[1]) || 1;
+                        stats[category].qty += qty;
+                    });
+                    stats[Object.keys(stats).find(c => card.innerHTML.includes(c === 'Coffee' ? 'Kopi' : (c === 'Non-Coffee' ? 'Tea' : ''))) || 'Snack'].price += totalHargaCard;
                 }
             });
 
-            alert(`--- LAPORAN TANGGAL: ${selectedDate} ---\n\n` +
-                  `Coffee     : ${stats["Coffee"]} item\n` +
-                  `Non-Coffee : ${stats["Non-Coffee"]} item\n` +
-                  `Snack      : ${stats["Snack"]} item\n\n` +
-                  `Total item terjual: ${stats["Coffee"] + stats["Non-Coffee"] + stats["Snack"]}`);
+            document.getElementById('report-title').innerText = `Laporan: ${selectedDate}`;
+            document.getElementById('report-content').innerHTML = `
+                ${Object.keys(stats).map(cat => `
+                    <div class="flex justify-between border-b border-slate-700 pb-2">
+                        <span class="font-bold">${cat}</span>
+                        <div class="text-right">
+                            <div>${stats[cat].qty} Item</div>
+                            <div class="text-amber-400 font-mono text-xs">Rp ${stats[cat].price.toLocaleString()}</div>
+                        </div>
+                    </div>
+                `).join('')}
+                <div class="flex justify-between pt-4 text-lg font-black text-white">
+                    <span>TOTAL</span>
+                    <span>Rp ${(stats.Coffee.price + stats['Non-Coffee'].price + stats.Snack.price).toLocaleString()}</span>
+                </div>
+            `;
+            document.getElementById('report-modal').classList.remove('hidden');
         }
 
         function clearSelesai() { document.getElementById('confirm-modal').classList.remove('hidden'); }
         function hideConfirm() { document.getElementById('confirm-modal').classList.add('hidden'); }
+        
         function executeClear() { 
             const container = document.getElementById('container-riwayat');
             const now = new Date().getTime();
@@ -129,7 +190,7 @@
                 if (now - time > limit || isNaN(time)) { card.remove(); count++; }
             });
             localStorage.setItem('kopral_riwayat', container.innerHTML);
-            alert(count > 0 ? `${count} data lama berhasil dihapus.` : "Tidak ada data yang berusia lebih dari 30 hari.");
+            alert(`${count} data lama dihapus.`);
             hideConfirm();
         }
 
