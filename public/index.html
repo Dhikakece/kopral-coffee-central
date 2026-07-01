@@ -33,6 +33,7 @@
                         <h3 class="text-sm font-bold text-slate-400">Riwayat Pesanan</h3>
                         <div class="flex gap-2">
                             <input type="date" id="search-date" onchange="filterRiwayat()" class="bg-slate-700 text-white text-[10px] px-2 py-1 rounded-lg border border-slate-600">
+                            <button onclick="tampilkanLaporan()" class="text-[10px] bg-amber-600/20 text-amber-400 px-3 py-1 rounded-lg border border-amber-900">Laporan</button>
                             <button onclick="clearSelesai()" class="text-[10px] bg-red-600/20 text-red-400 px-3 py-1 rounded-lg border border-red-900">Bersihkan</button>
                         </div>
                     </div>
@@ -46,7 +47,6 @@
         <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl max-w-sm w-full text-center">
             <i class="fas fa-trash-alt text-red-500 text-4xl mb-4"></i>
             <h3 class="text-white font-bold text-lg mb-2">Hapus Riwayat Lama?</h3>
-            <p class="text-slate-400 text-sm mb-6">Hanya pesanan berusia > 30 hari yang akan dihapus.</p>
             <div class="grid grid-cols-2 gap-3">
                 <button onclick="hideConfirm()" class="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl font-bold">Batal</button>
                 <button onclick="executeClear()" class="bg-red-600 hover:bg-red-500 text-white py-2 rounded-xl font-bold">Lanjutkan</button>
@@ -69,6 +69,7 @@
         const socket = io("https://kopral-coffee-central.onrender.com");
         let isSoundEnabled = true;
 
+        // ... (Fungsi existing tetap sama) ...
         window.onload = () => {
             const savedRiwayat = localStorage.getItem('kopral_riwayat');
             if (savedRiwayat) {
@@ -78,45 +79,54 @@
         };
 
         function toggleModal(show) { document.getElementById('modal').classList.toggle('hidden', !show); }
-        function toggleSound() {
-            isSoundEnabled = !isSoundEnabled;
-            document.getElementById('toggle-sound').innerText = isSoundEnabled ? "Aktif" : "Mati";
-        }
-
-        // Fungsi Filter Tanggal
+        function toggleSound() { isSoundEnabled = !isSoundEnabled; document.getElementById('toggle-sound').innerText = isSoundEnabled ? "Aktif" : "Mati"; }
         function filterRiwayat() {
             const selectedDate = document.getElementById('search-date').value;
             const container = document.getElementById('container-riwayat');
-            const cards = container.children;
-
-            for (let card of cards) {
+            Array.from(container.children).forEach(card => {
                 const cardTime = parseInt(card.getAttribute('data-time'));
-                if (!cardTime) continue;
-                
+                if (!cardTime) return;
                 const cardDate = new Date(cardTime).toISOString().split('T')[0];
-                if (!selectedDate || cardDate === selectedDate) {
-                    card.style.display = "block";
-                } else {
-                    card.style.display = "none";
+                card.style.display = (!selectedDate || cardDate === selectedDate) ? "block" : "none";
+            });
+        }
+
+        // FUNGSI LAPORAN BARU
+        function tampilkanLaporan() {
+            const container = document.getElementById('container-riwayat');
+            const selectedDate = document.getElementById('search-date').value || new Date().toISOString().split('T')[0];
+            let stats = { "Coffee": 0, "Non-Coffee": 0, "Snack": 0 };
+
+            Array.from(container.children).forEach(card => {
+                const cardTime = parseInt(card.getAttribute('data-time'));
+                if (!cardTime) return;
+                const cardDate = new Date(cardTime).toISOString().split('T')[0];
+                
+                if (cardDate === selectedDate) {
+                    const cardHTML = card.innerHTML;
+                    if (cardHTML.match(/Kopi|Latte|Espresso|Americano/i)) stats["Coffee"] += 1;
+                    else if (cardHTML.match(/Tea|Choco|Matcha|Milk/i)) stats["Non-Coffee"] += 1;
+                    else stats["Snack"] += 1;
                 }
-            }
+            });
+
+            alert(`--- LAPORAN TANGGAL: ${selectedDate} ---\n\n` +
+                  `Coffee     : ${stats["Coffee"]} item\n` +
+                  `Non-Coffee : ${stats["Non-Coffee"]} item\n` +
+                  `Snack      : ${stats["Snack"]} item\n\n` +
+                  `Total item terjual: ${stats["Coffee"] + stats["Non-Coffee"] + stats["Snack"]}`);
         }
 
         function clearSelesai() { document.getElementById('confirm-modal').classList.remove('hidden'); }
         function hideConfirm() { document.getElementById('confirm-modal').classList.add('hidden'); }
-        
         function executeClear() { 
             const container = document.getElementById('container-riwayat');
             const now = new Date().getTime();
             const limit = 30 * 24 * 60 * 60 * 1000;
             let count = 0;
-
             Array.from(container.children).forEach(card => {
                 const time = parseInt(card.getAttribute('data-time'));
-                if (now - time > limit || isNaN(time)) {
-                    card.remove();
-                    count++;
-                }
+                if (now - time > limit || isNaN(time)) { card.remove(); count++; }
             });
             localStorage.setItem('kopral_riwayat', container.innerHTML);
             alert(count > 0 ? `${count} data lama berhasil dihapus.` : "Tidak ada data yang berusia lebih dari 30 hari.");
@@ -126,9 +136,7 @@
         socket.on('notifikasi-pesanan-baru', (pesanan) => {
             if (isSoundEnabled) document.getElementById('notif-sound').play().catch(()=>{});
             document.getElementById('pesan-kosong').classList.add('hidden');
-            
             const totalHarga = pesanan.items.reduce((acc, i) => acc + ((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 0)), 0);
-            
             const div = document.createElement('div');
             div.id = pesanan.id_pesanan;
             div.className = "bg-slate-800 border border-slate-700 p-4 rounded-2xl shadow-xl animate-pulse";
@@ -141,8 +149,7 @@
                 <div class="my-3 bg-slate-900/40 rounded-xl p-3 text-xs">
                     ${pesanan.items.map(i => `<div class="flex justify-between py-1"><span>${i.name} x${i.quantity}</span><span>Rp ${(i.price*i.quantity).toLocaleString()}</span></div>`).join('')}
                     <div class="border-t border-slate-700 mt-2 pt-2 flex justify-between font-bold text-amber-400 text-sm">
-                        <span>TOTAL</span>
-                        <span>Rp ${totalHarga.toLocaleString()}</span>
+                        <span>TOTAL</span><span>Rp ${totalHarga.toLocaleString()}</span>
                     </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mt-4">
@@ -163,11 +170,9 @@
             const card = document.getElementById(id);
             card.classList.remove('animate-pulse');
             card.querySelector('.grid').remove();
-            
             const now = new Date();
             card.setAttribute('data-time', now.getTime());
             card.innerHTML += `<div class="mt-3 text-[10px] text-slate-500 font-mono italic">Selesai: ${now.toLocaleString('id-ID')}</div>`;
-            
             document.getElementById('container-riwayat').prepend(card);
             localStorage.setItem('kopral_riwayat', document.getElementById('container-riwayat').innerHTML);
         }
