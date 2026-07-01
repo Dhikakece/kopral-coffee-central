@@ -30,8 +30,11 @@
                 </div>
                 <div>
                     <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-sm font-bold text-slate-400">Riwayat Pesanan (Data 30 Hari)</h3>
-                        <button onclick="clearSelesai()" class="text-[10px] bg-red-600/20 text-red-400 px-3 py-1 rounded-lg border border-red-900">Pembersihan Otomatis</button>
+                        <h3 class="text-sm font-bold text-slate-400">Riwayat Pesanan</h3>
+                        <div class="flex gap-2">
+                            <input type="date" id="search-date" onchange="filterRiwayat()" class="bg-slate-700 text-white text-[10px] px-2 py-1 rounded-lg border border-slate-600">
+                            <button onclick="clearSelesai()" class="text-[10px] bg-red-600/20 text-red-400 px-3 py-1 rounded-lg border border-red-900">Bersihkan</button>
+                        </div>
                     </div>
                     <div id="container-riwayat" class="space-y-2 max-h-60 overflow-y-auto pr-2 text-xs"></div>
                 </div>
@@ -66,7 +69,6 @@
         const socket = io("https://kopral-coffee-central.onrender.com");
         let isSoundEnabled = true;
 
-        // Muat data saat aplikasi dibuka
         window.onload = () => {
             const savedRiwayat = localStorage.getItem('kopral_riwayat');
             if (savedRiwayat) {
@@ -79,6 +81,25 @@
         function toggleSound() {
             isSoundEnabled = !isSoundEnabled;
             document.getElementById('toggle-sound').innerText = isSoundEnabled ? "Aktif" : "Mati";
+        }
+
+        // Fungsi Filter Tanggal
+        function filterRiwayat() {
+            const selectedDate = document.getElementById('search-date').value;
+            const container = document.getElementById('container-riwayat');
+            const cards = container.children;
+
+            for (let card of cards) {
+                const cardTime = parseInt(card.getAttribute('data-time'));
+                if (!cardTime) continue;
+                
+                const cardDate = new Date(cardTime).toISOString().split('T')[0];
+                if (!selectedDate || cardDate === selectedDate) {
+                    card.style.display = "block";
+                } else {
+                    card.style.display = "none";
+                }
+            }
         }
 
         function clearSelesai() { document.getElementById('confirm-modal').classList.remove('hidden'); }
@@ -106,6 +127,8 @@
             if (isSoundEnabled) document.getElementById('notif-sound').play().catch(()=>{});
             document.getElementById('pesan-kosong').classList.add('hidden');
             
+            const totalHarga = pesanan.items.reduce((acc, i) => acc + ((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 0)), 0);
+            
             const div = document.createElement('div');
             div.id = pesanan.id_pesanan;
             div.className = "bg-slate-800 border border-slate-700 p-4 rounded-2xl shadow-xl animate-pulse";
@@ -117,6 +140,10 @@
                 <h3 class="font-bold text-white mb-3">${pesanan.nama}</h3>
                 <div class="my-3 bg-slate-900/40 rounded-xl p-3 text-xs">
                     ${pesanan.items.map(i => `<div class="flex justify-between py-1"><span>${i.name} x${i.quantity}</span><span>Rp ${(i.price*i.quantity).toLocaleString()}</span></div>`).join('')}
+                    <div class="border-t border-slate-700 mt-2 pt-2 flex justify-between font-bold text-amber-400 text-sm">
+                        <span>TOTAL</span>
+                        <span>Rp ${totalHarga.toLocaleString()}</span>
+                    </div>
                 </div>
                 <div class="grid grid-cols-2 gap-2 mt-4">
                     <button onclick="prosesPesanan('${pesanan.id_pesanan}')" id="btn-p-${pesanan.id_pesanan}" class="bg-amber-500 text-slate-950 text-xs font-bold py-2 rounded-xl">Proses</button>
