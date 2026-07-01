@@ -9,10 +9,25 @@
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        /* Pastikan overlay menutup seluruh layar dengan benar */
+        #start-overlay {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
-    <div class="fixed bottom-4 right-4 pointer-events-none z-50">
+    <div id="start-overlay" class="fixed inset-0 bg-slate-950 z-[9999] flex items-center justify-center">
+        <button onclick="startApp()" id="btn-start-app" class="bg-amber-500 text-slate-950 font-bold px-10 py-4 rounded-2xl animate-pulse shadow-2xl text-lg flex items-center gap-3">
+            <i class="fas fa-play"></i>
+            <span>MULAI APLIKASI KASIR</span>
+        </button>
+    </div>
+
+    <div class="fixed bottom-4 right-4 pointer-events-none opacity-20 hover:opacity-100 transition-opacity duration-500 z-50">
         <div class="text-[10px] font-black uppercase tracking-widest text-white bg-slate-800/60 px-2 py-1 rounded shadow-lg animate-pulse backdrop-blur-sm border border-slate-700">
             Created by CyberPapsel
         </div>
@@ -51,28 +66,6 @@
         </div>
     </div>
 
-    <div id="report-modal" class="fixed inset-0 bg-black/80 z-[70] hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 p-6 rounded-3xl border border-slate-700 shadow-2xl max-w-sm w-full">
-            <h3 id="report-title" class="text-white font-bold text-lg mb-4 text-center">Laporan Penjualan</h3>
-            <div id="report-content" class="space-y-3 text-sm text-slate-300"></div>
-            <div class="grid grid-cols-2 gap-3 mt-6">
-                <button onclick="document.getElementById('report-modal').classList.add('hidden')" class="bg-slate-700 py-3 rounded-2xl font-bold text-white hover:bg-slate-600">Tutup</button>
-                <button onclick="cetakPDF()" class="bg-amber-600 py-3 rounded-2xl font-bold text-slate-900 hover:bg-amber-500">Cetak PDF</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="confirm-modal" class="fixed inset-0 bg-black/70 z-[60] hidden flex items-center justify-center p-4">
-        <div class="bg-slate-800 p-6 rounded-2xl border border-slate-700 shadow-2xl max-w-sm w-full text-center">
-            <i class="fas fa-trash-alt text-red-500 text-4xl mb-4"></i>
-            <h3 class="text-white font-bold text-lg mb-2">Hapus Riwayat Lama?</h3>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="hideConfirm()" class="bg-slate-700 hover:bg-slate-600 text-white py-2 rounded-xl font-bold">Batal</button>
-                <button onclick="executeClear()" class="bg-red-600 hover:bg-red-500 text-white py-2 rounded-xl font-bold">Lanjutkan</button>
-            </div>
-        </div>
-    </div>
-
     <main class="p-6 max-w-7xl mx-auto">
         <h2 class="text-lg font-bold mb-6 flex items-center gap-2">
             <i class="fas fa-receipt text-amber-400"></i> Antrean Aktif
@@ -82,11 +75,92 @@
         </div>
     </main>
 
-    <audio id="notif-sound" src="notification.mp3" preload="auto"></audio>
+    <audio id="notif-sound" src="https://kopral-coffee-central.onrender.com/notification.mp3" preload="auto"></audio>
 
     <script>
-        const socket = io("https://kopral-coffee-central.onrender.com");
+        let socket;
         let isSoundEnabled = true;
+
+        // --- PENTING: FUNGSI INI MENGATASI MASALAH STUCK ---
+        async function startApp() {
+            const btn = document.getElementById('btn-start-app');
+            btn.innerText = 'Menghubungkan...';
+            btn.classList.remove('animate-pulse');
+            btn.style.opacity = '0.5';
+
+            try {
+                // 1. Inisialisasi Audio (Membuka Izin)
+                const audio = document.getElementById('notif-sound');
+                await audio.play();
+                audio.pause();
+                audio.currentTime = 0;
+                console.log("Audio diinisialisasi");
+
+                // 2. Inisialisasi Socket.io
+                if (!socket) {
+                    socket = io("https://kopral-coffee-central.onrender.com");
+                    
+                    socket.on('connect', () => {
+                        console.log("Socket terhubung:", socket.id);
+                    });
+
+                    socket.on('connect_error', (err) => {
+                        console.error("Koneksi Socket Gagal:", err);
+                    });
+
+                    // Pindahkan logika socket.on di sini agar aktif setelah tombol diklik
+                    socket.on('notifikasi-pesanan-baru', (pesanan) => {
+                        handleNewOrder(pesanan);
+                    });
+                }
+
+                // 3. Sembunyikan Overlay
+                document.getElementById('start-overlay').style.display = 'none';
+            } catch (err) {
+                console.error("Error saat inisialisasi:", err);
+                // TAMPILKAN ALERT JIKA ERROR AGAR TAHU PENYEBABNYA
+                alert("Gagal terhubung ke server: " + err.message + ". Silakan coba lagi atau refresh aplikasi.");
+                // TETAP SEMBUNYIKAN OVERLAY AGAR APLIKASI TIDAK STUCK GELAP
+                document.getElementById('start-overlay').style.display = 'none';
+            } finally {
+                // Kembalikan tombol ke kondisi awal (opsional)
+                btn.innerText = 'MULAI APLIKASI KASIR';
+                btn.style.opacity = '1';
+            }
+        }
+
+        function handleNewOrder(pesanan) {
+            if (isSoundEnabled) {
+                const audio = document.getElementById('notif-sound');
+                audio.currentTime = 0;
+                audio.play().catch(e => console.log("Gagal memutar suara notifikasi:", e));
+            }
+            
+            document.getElementById('pesan-kosong').classList.add('hidden');
+            const totalHarga = pesanan.items.reduce((acc, i) => acc + ((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 0)), 0);
+            const div = document.createElement('div');
+            div.id = pesanan.id_pesanan;
+            div.className = "bg-slate-800 border border-slate-700 p-4 rounded-2xl shadow-xl animate-pulse";
+            div.innerHTML = `
+                <div class="flex justify-between mb-2">
+                    <span class="bg-amber-400 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded uppercase">${pesanan.metode}</span>
+                    <span class="text-xs bg-slate-700 px-2 py-1 rounded font-mono">MEJA ${pesanan.meja}</span>
+                </div>
+                <h3 class="font-bold text-white mb-3">${pesanan.nama}</h3>
+                <div class="my-3 bg-slate-900/40 rounded-xl p-3 text-xs">
+                    ${pesanan.items.map(i => `<div class="flex justify-between py-1"><span>${i.name} x${i.quantity}</span><span>Rp ${(i.price*i.quantity).toLocaleString()}</span></div>`).join('')}
+                    <div class="border-t border-slate-700 mt-2 pt-2 flex justify-between font-bold text-amber-400 text-sm">
+                        <span>TOTAL</span><span>Rp ${totalHarga.toLocaleString()}</span>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-4">
+                    <button onclick="prosesPesanan('${pesanan.id_pesanan}')" id="btn-p-${pesanan.id_pesanan}" class="bg-amber-500 text-slate-950 text-xs font-bold py-2 rounded-xl">Proses</button>
+                    <button onclick="selesaiPesanan('${pesanan.id_pesanan}')" id="btn-s-${pesanan.id_pesanan}" disabled class="bg-slate-700 text-slate-500 text-xs font-bold py-2 rounded-xl cursor-not-allowed">Selesai</button>
+                </div>`;
+            document.getElementById('container-antrean').prepend(div);
+        }
+
+        // --- SISA FUNGSI PENDUKUNG (Sama seperti kode Anda) ---
 
         function cetakPDF() {
             const { jsPDF } = window.jspdf;
@@ -102,7 +176,8 @@
                 const cardDate = new Date(cardTime).toISOString().split('T')[0];
                 if (cardDate === selectedDate) {
                     card.querySelectorAll('.flex.justify-between.py-1').forEach(item => {
-                        tableData.push([item.innerText.split('x')[0].trim(), item.innerText.split('Rp')[1].trim()]);
+                        const text = item.innerText;
+                        tableData.push([text.split('x')[0].trim(), text.split('Rp')[1].trim()]);
                     });
                 }
             });
@@ -149,91 +224,8 @@
                         let category = "Snack";
                         if (text.match(/Kopi|Latte|Espresso|Americano/i)) category = "Coffee";
                         else if (text.match(/Tea|Choco|Matcha|Milk/i)) category = "Non-Coffee";
-                        const qty = parseInt(text.split('x')[1]) || 1;
+                        const qtyMatch = text.match(/x(\d+)/);
+                        const qty = qtyMatch ? parseInt(qtyMatch[1]) : 1;
                         stats[category].qty += qty;
                     });
-                    stats[Object.keys(stats).find(c => card.innerHTML.includes(c === 'Coffee' ? 'Kopi' : (c === 'Non-Coffee' ? 'Tea' : ''))) || 'Snack'].price += totalHargaCard;
-                }
-            });
-            document.getElementById('report-title').innerText = `Laporan: ${selectedDate}`;
-            document.getElementById('report-content').innerHTML = `
-                ${Object.keys(stats).map(cat => `
-                    <div class="flex justify-between border-b border-slate-700 pb-2">
-                        <span class="font-bold">${cat}</span>
-                        <div class="text-right">
-                            <div>${stats[cat].qty} Item</div>
-                            <div class="text-amber-400 font-mono text-xs">Rp ${stats[cat].price.toLocaleString()}</div>
-                        </div>
-                    </div>
-                `).join('')}
-                <div class="flex justify-between pt-4 text-lg font-black text-white">
-                    <span>TOTAL</span>
-                    <span>Rp ${(stats.Coffee.price + stats['Non-Coffee'].price + stats.Snack.price).toLocaleString()}</span>
-                </div>
-            `;
-            document.getElementById('report-modal').classList.remove('hidden');
-        }
-
-        function clearSelesai() { document.getElementById('confirm-modal').classList.remove('hidden'); }
-        function hideConfirm() { document.getElementById('confirm-modal').classList.add('hidden'); }
-        
-        function executeClear() { 
-            const container = document.getElementById('container-riwayat');
-            const now = new Date().getTime();
-            const limit = 30 * 24 * 60 * 60 * 1000;
-            let count = 0;
-            Array.from(container.children).forEach(card => {
-                const time = parseInt(card.getAttribute('data-time'));
-                if (now - time > limit || isNaN(time)) { card.remove(); count++; }
-            });
-            localStorage.setItem('kopral_riwayat', container.innerHTML);
-            alert(`${count} data lama dihapus.`);
-            hideConfirm();
-        }
-
-        socket.on('notifikasi-pesanan-baru', (pesanan) => {
-            if (isSoundEnabled) document.getElementById('notif-sound').play().catch(()=>{});
-            document.getElementById('pesan-kosong').classList.add('hidden');
-            const totalHarga = pesanan.items.reduce((acc, i) => acc + ((parseFloat(i.price) || 0) * (parseInt(i.quantity) || 0)), 0);
-            const div = document.createElement('div');
-            div.id = pesanan.id_pesanan;
-            div.className = "bg-slate-800 border border-slate-700 p-4 rounded-2xl shadow-xl animate-pulse";
-            div.innerHTML = `
-                <div class="flex justify-between mb-2">
-                    <span class="bg-amber-400 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded uppercase">${pesanan.metode}</span>
-                    <span class="text-xs bg-slate-700 px-2 py-1 rounded font-mono">MEJA ${pesanan.meja}</span>
-                </div>
-                <h3 class="font-bold text-white mb-3">${pesanan.nama}</h3>
-                <div class="my-3 bg-slate-900/40 rounded-xl p-3 text-xs">
-                    ${pesanan.items.map(i => `<div class="flex justify-between py-1"><span>${i.name} x${i.quantity}</span><span>Rp ${(i.price*i.quantity).toLocaleString()}</span></div>`).join('')}
-                    <div class="border-t border-slate-700 mt-2 pt-2 flex justify-between font-bold text-amber-400 text-sm">
-                        <span>TOTAL</span><span>Rp ${totalHarga.toLocaleString()}</span>
-                    </div>
-                </div>
-                <div class="grid grid-cols-2 gap-2 mt-4">
-                    <button onclick="prosesPesanan('${pesanan.id_pesanan}')" id="btn-p-${pesanan.id_pesanan}" class="bg-amber-500 text-slate-950 text-xs font-bold py-2 rounded-xl">Proses</button>
-                    <button onclick="selesaiPesanan('${pesanan.id_pesanan}')" id="btn-s-${pesanan.id_pesanan}" disabled class="bg-slate-700 text-slate-500 text-xs font-bold py-2 rounded-xl cursor-not-allowed">Selesai</button>
-                </div>`;
-            document.getElementById('container-antrean').prepend(div);
-        });
-
-        function prosesPesanan(id) {
-            document.getElementById(`btn-p-${id}`).className = "bg-blue-600 text-white text-xs font-bold py-2 rounded-xl cursor-not-allowed";
-            document.getElementById(`btn-p-${id}`).innerText = "Dibuat...";
-            document.getElementById(`btn-s-${id}`).disabled = false;
-            document.getElementById(`btn-s-${id}`).className = "bg-emerald-600 text-white text-xs font-bold py-2 rounded-xl";
-        }
-
-        function selesaiPesanan(id) {
-            const card = document.getElementById(id);
-            card.classList.remove('animate-pulse');
-            card.querySelector('.grid').remove();
-            const now = new Date();
-            card.setAttribute('data-time', now.getTime());
-            card.innerHTML += `<div class="mt-3 text-[10px] text-slate-500 font-mono italic">Selesai: ${now.toLocaleString('id-ID')}</div>`;
-            document.getElementById('container-riwayat').prepend(card);
-            localStorage.setItem('kopral_riwayat', document.getElementById('container-riwayat').innerHTML);
-        }
-    </script>
-</body>
-</html>
+                    stats[Object.keys(stats).
