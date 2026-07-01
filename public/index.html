@@ -7,50 +7,46 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
-        #start-overlay { display: flex; align-items: center; justify-content: center; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
     <div id="start-overlay" class="fixed inset-0 bg-slate-950 z-[9999] flex items-center justify-center">
-        <button onclick="startApp()" id="btn-start-app" class="bg-amber-500 text-slate-950 font-bold px-10 py-4 rounded-2xl animate-pulse shadow-2xl text-lg flex items-center gap-3">
-            <i class="fas fa-play"></i>
-            <span>MULAI APLIKASI KASIR</span>
-        </button>
+        <button onclick="startApp()" id="btn-start-app" class="bg-amber-500 text-slate-950 font-bold px-10 py-4 rounded-2xl animate-pulse shadow-2xl text-lg">MULAI APLIKASI KASIR</button>
     </div>
 
     <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
-        <h1 class="text-base font-bold text-white">KOPRAL <span class="text-amber-400">POS MONITOR</span></h1>
-        <button onclick="toggleModal(true)" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition">
-            <i class="fas fa-cog mr-1"></i> Pengaturan
-        </button>
+        <h1 class="font-bold text-white">KOPRAL <span class="text-amber-400">POS MONITOR</span></h1>
+        <button onclick="toggleModal(true)" class="bg-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-600 transition">Pengaturan</button>
     </header>
 
-    <div id="modal" class="fixed inset-0 bg-slate-950/90 z-50 hidden p-4 overflow-y-auto">
-        <div class="max-w-xl mx-auto bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-bold text-white">Pengaturan & Riwayat</h2>
-                <button onclick="toggleModal(false)" class="text-slate-400 text-xl">✕</button>
+    <div id="modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden transition-all duration-300">
+        <div onclick="toggleModal(false)" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-xl bg-slate-800/90 border border-slate-700/50 rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+            <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+                <h2 class="font-bold text-white text-lg flex items-center gap-2"><i class="fas fa-cog text-amber-400"></i> Pengaturan & Riwayat</h2>
+                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
             </div>
-            <div class="space-y-6">
-                <div class="flex items-center justify-between p-4 bg-slate-900 rounded-xl">
-                    <span class="font-medium text-sm">Notifikasi Suara</span>
-                    <button id="toggle-sound" onclick="toggleSound()" class="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">Aktif</button>
-                </div>
+            
+            <div class="space-y-4">
                 <div>
-                    <div class="flex justify-between items-center mb-3">
-                        <h3 class="text-sm font-bold text-slate-400">Riwayat Pesanan</h3>
-                        <div class="flex gap-2">
-                            <input type="date" id="search-date" onchange="filterRiwayat()" class="bg-slate-700 text-white text-[10px] px-2 py-1 rounded-lg border border-slate-600">
-                            <button onclick="tampilkanLaporan()" class="text-[10px] bg-amber-600/20 text-amber-400 px-3 py-1 rounded-lg border border-amber-900">Laporan</button>
-                        </div>
-                    </div>
-                    <div id="container-riwayat" class="space-y-2 max-h-60 overflow-y-auto pr-2 text-xs"></div>
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Filter Tanggal</label>
+                    <input type="date" id="input-tanggal" onchange="filterRiwayat()" class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-xl text-sm focus:border-amber-500 outline-none transition-all">
+                </div>
+                <div class="grid grid-cols-1 gap-2">
+                    <button onclick="cetakLaporanPDF()" class="bg-blue-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-blue-700 transition"><i class="fas fa-file-pdf mr-2"></i> CETAK PDF</button>
+                    <button onclick="downloadCSV()" class="bg-emerald-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-emerald-700 transition"><i class="fas fa-file-csv mr-2"></i> EXPORT CSV (ARSIP)</button>
+                    <button onclick="hapusRiwayatManual()" class="bg-red-500/10 border border-red-500/20 text-red-400 py-3 rounded-xl text-xs font-bold hover:bg-red-500/20 transition"><i class="fas fa-trash mr-2"></i> HAPUS RIWAYAT > 30 HARI</button>
                 </div>
             </div>
+            <div id="container-riwayat" class="mt-6 space-y-3 text-xs max-h-[300px] overflow-y-auto pr-2 custom-scrollbar"></div>
         </div>
     </div>
 
@@ -65,54 +61,154 @@
 
     <script>
         let socket;
-        let isSoundEnabled = true;
+        let activeOrders = JSON.parse(localStorage.getItem('kopral_active_orders') || '{}');
 
-        async function startApp() {
-            const btn = document.getElementById('btn-start-app');
-            btn.innerText = 'Menghubungkan...';
-            
-            try {
-                // Inisialisasi audio untuk bypass kebijakan browser
-                const audio = document.getElementById('notif-sound');
-                await audio.play().catch(() => {});
-                audio.pause();
-                audio.currentTime = 0;
+        window.onload = () => { renderActiveOrders(); };
 
-                // Hubungkan Socket
-                socket = io("https://kopral-coffee-central.onrender.com");
-                socket.on('notifikasi-pesanan-baru', (pesanan) => handleNewOrder(pesanan));
-                
-                // Jika koneksi sukses, hapus overlay
-                document.getElementById('start-overlay').style.display = 'none';
-            } catch (err) {
-                console.error(err);
-                document.getElementById('start-overlay').style.display = 'none'; // Tetap buka agar tidak frustrasi
+        function renderActiveOrders() {
+            const container = document.getElementById('container-antrean');
+            document.querySelectorAll('.group').forEach(el => el.remove());
+            const orders = Object.values(activeOrders);
+            if (orders.length > 0) {
+                document.getElementById('pesan-kosong').classList.add('hidden');
+                orders.reverse().forEach(pesanan => { displayOrderUI(pesanan); });
             }
         }
 
-        function handleNewOrder(pesanan) {
-            if (isSoundEnabled) document.getElementById('notif-sound').play().catch(() => {});
-            document.getElementById('pesan-kosong').classList.add('hidden');
-            // ... (logika pembuatan elemen card pesanan tetap sama seperti sebelumnya)
+        async function startApp() {
+            try {
+                const audio = document.getElementById('notif-sound');
+                await audio.play().catch(() => {}); audio.pause();
+                socket = io("https://kopral-coffee-central.onrender.com");
+                socket.on('notifikasi-pesanan-baru', (pesanan) => {
+                    activeOrders[pesanan.id_pesanan] = pesanan;
+                    localStorage.setItem('kopral_active_orders', JSON.stringify(activeOrders));
+                    renderActiveOrders();
+                    document.getElementById('notif-sound').play().catch(() => {});
+                });
+                document.getElementById('start-overlay').style.display = 'none';
+            } catch (err) { alert("Gagal terhubung"); }
         }
 
-        function tampilkanLaporan() {
-            const container = document.getElementById('container-riwayat');
-            const selectedDate = document.getElementById('search-date').value || new Date().toISOString().split('T')[0];
-            let stats = { "Coffee": { qty: 0, price: 0 }, "Non-Coffee": { qty: 0, price: 0 }, "Snack": { qty: 0, price: 0 } };
-            
-            Array.from(container.children).forEach(card => {
-                const time = parseInt(card.getAttribute('data-time'));
-                if (new Date(time).toISOString().split('T')[0] === selectedDate) {
-                    // Logika kategori (sesuaikan dengan kode Anda sebelumnya)
-                    stats["Coffee"].qty += 1; // Contoh saja
-                }
-            });
-            // Tampilkan hasil di modal...
-            alert("Laporan untuk " + selectedDate + " siap diproses.");
+        function displayOrderUI(pesanan) {
+            const totalHarga = pesanan.items.reduce((acc, i) => acc + (parseFloat(i.price) * parseInt(i.quantity)), 0);
+            const div = document.createElement('div');
+            div.id = pesanan.id_pesanan;
+            div.className = "group bg-slate-800 border border-slate-700 p-5 rounded-3xl shadow-2xl";
+            div.innerHTML = `
+                <div class="flex justify-between items-start mb-4">
+                    <div><h3 class="font-bold text-white text-lg">${pesanan.nama}</h3>
+                    <span class="inline-block mt-1 bg-amber-500/10 text-amber-500 text-[10px] font-bold px-3 py-1 rounded-full border border-amber-500/20">MEJA ${pesanan.meja}</span></div>
+                </div>
+                <div class="bg-slate-900/50 rounded-2xl p-4 space-y-2 mb-4">
+                    ${pesanan.items.map(i => `<div class="flex justify-between text-sm"><span class="text-slate-300">${i.quantity}x ${i.name}</span><span class="font-medium text-slate-100">Rp ${Number(i.price).toLocaleString()}</span></div>`).join('')}
+                    <div class="border-t border-slate-700/50 mt-2 pt-2 flex justify-between font-black text-white"><span>TOTAL</span><span>Rp ${totalHarga.toLocaleString()}</span></div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <button id="btn-proses-${pesanan.id_pesanan}" onclick="prosesPesanan('${pesanan.id_pesanan}')" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold py-3 rounded-2xl transition"><i class="fas fa-clock"></i> PROSES</button>
+                    <button id="btn-selesai-${pesanan.id_pesanan}" disabled onclick="selesaiPesanan('${pesanan.id_pesanan}')" class="bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed text-xs font-bold py-3 rounded-2xl transition"><i class="fas fa-check"></i> SELESAI</button>
+                </div>
+            `;
+            document.getElementById('container-antrean').prepend(div);
         }
-        
-        function toggleSound() { isSoundEnabled = !isSoundEnabled; }
+
+        function prosesPesanan(id) {
+            const btnProses = document.getElementById(`btn-proses-${id}`);
+            const btnSelesai = document.getElementById(`btn-selesai-${id}`);
+            document.getElementById(id).classList.add('border-blue-500');
+            btnProses.innerHTML = '<i class="fas fa-spinner fa-spin"></i> DIPROSES';
+            btnProses.classList.replace('bg-amber-500', 'bg-blue-600');
+            btnSelesai.disabled = false;
+            btnSelesai.classList.replace('bg-slate-800', 'bg-green-600');
+            btnSelesai.classList.replace('text-slate-600', 'text-white');
+            btnSelesai.classList.remove('cursor-not-allowed', 'border', 'border-slate-700');
+        }
+
+        function selesaiPesanan(id) {
+            const card = document.getElementById(id);
+            if (card) {
+                const cardClone = card.cloneNode(true);
+                cardClone.querySelector('.grid')?.remove();
+                cardClone.appendChild(Object.assign(document.createElement('div'), {
+                    className: "mt-4 pt-4 border-t border-slate-700/50 text-center",
+                    innerHTML: `<span class="inline-block bg-green-900/30 text-green-500 text-[10px] font-bold px-4 py-2 rounded-full border border-green-500/20"><i class="fas fa-check-circle mr-2"></i> PESANAN SELESAI</span>`
+                }));
+
+                const dataPesanan = {
+                    html: cardClone.innerHTML,
+                    items: activeOrders[id].items,
+                    timestamp: new Date().getTime(),
+                    tanggal: new Date().toISOString().split('T')[0]
+                };
+
+                let riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
+                riwayat.unshift(dataPesanan);
+                localStorage.setItem('kopral_riwayat_data', JSON.stringify(riwayat));
+                
+                delete activeOrders[id];
+                localStorage.setItem('kopral_active_orders', JSON.stringify(activeOrders));
+                card.remove();
+                if(Object.keys(activeOrders).length === 0) document.getElementById('pesan-kosong').classList.remove('hidden');
+            }
+        }
+
+        function cetakLaporanPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            const riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
+            if (riwayat.length === 0) { Swal.fire('Oops', 'Data kosong', 'info'); return; }
+            let summary = {};
+            riwayat.forEach(r => r.items.forEach(i => {
+                if(!summary[i.name]) summary[i.name] = { qty: 0, price: i.price };
+                summary[i.name].qty += parseInt(i.quantity);
+            }));
+            let body = Object.keys(summary).map(name => [name, summary[name].qty, Number(summary[name].price).toLocaleString(), (summary[name].qty * summary[name].price).toLocaleString()]);
+            doc.text("LAPORAN PENJUALAN", 14, 15);
+            doc.autoTable({ head: [['Nama Item', 'Qty', 'Harga', 'Subtotal']], body: body });
+            doc.save('Laporan_Penjualan.pdf');
+        }
+
+        function downloadCSV() {
+            const riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
+            if (riwayat.length === 0) { Swal.fire('Oops', 'Data kosong', 'info'); return; }
+            let csv = "Tanggal,Items,Total\n";
+            riwayat.forEach(r => {
+                const items = r.items.map(i => `${i.quantity}x ${i.name}`).join(';');
+                csv += `${r.tanggal},"${items}",${r.items.reduce((acc, i) => acc + (i.price * i.quantity), 0)}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Riwayat_Penjualan_${new Date().toISOString().split('T')[0]}.csv`;
+            a.click();
+        }
+
+        function filterRiwayat() {
+            const tanggal = document.getElementById('input-tanggal').value;
+            const container = document.getElementById('container-riwayat');
+            const riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
+            container.innerHTML = '';
+            const filtered = tanggal ? riwayat.filter(i => i.tanggal === tanggal) : riwayat;
+            filtered.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "bg-slate-900 p-4 rounded-xl border border-slate-700";
+                div.innerHTML = item.html;
+                container.appendChild(div);
+            });
+        }
+
+        function hapusRiwayatManual() {
+            let riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
+            const batas = new Date(); batas.setDate(batas.getDate() - 30);
+            const dataBaru = riwayat.filter(i => new Date(i.timestamp) >= batas);
+            if(dataBaru.length === riwayat.length) { Swal.fire('Info', 'Tidak ada riwayat lama (>30 hari) untuk dihapus.', 'info'); return; }
+            Swal.fire({ title: 'Hapus Riwayat Lama?', text: "Hanya data > 30 hari yang akan dihapus.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Ya, Hapus!' }).then((result) => {
+                if (result.isConfirmed) { localStorage.setItem('kopral_riwayat_data', JSON.stringify(dataBaru)); filterRiwayat(); Swal.fire('Dihapus!', 'Riwayat lama berhasil dibersihkan.', 'success'); }
+            });
+        }
+
+        function toggleModal(show) { document.getElementById('modal').classList.toggle('hidden', !show); if(show) { document.getElementById('input-tanggal').value = new Date().toISOString().split('T')[0]; filterRiwayat(); } }
     </script>
 </body>
 </html>
