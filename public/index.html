@@ -10,43 +10,38 @@
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
-    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center shadow-md">
-        <h1 class="text-base font-bold text-white">KOPRAL <span class="text-amber-400">POS V2</span></h1>
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
+        <h1 class="text-base font-bold text-white">KOPRAL <span class="text-amber-400">POS MONITOR</span></h1>
         <button onclick="toggleModal(true)" class="bg-slate-700 hover:bg-slate-600 px-4 py-2 rounded-xl text-xs font-bold transition">
             <i class="fas fa-cog mr-1"></i> Pengaturan & Riwayat
         </button>
     </header>
 
     <div id="modal" class="fixed inset-0 bg-slate-950/90 z-50 hidden p-4 overflow-y-auto">
-        <div class="max-w-2xl mx-auto bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl">
+        <div class="max-w-xl mx-auto bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-2xl">
             <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-white">Pengaturan & Riwayat</h2>
-                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-white text-xl">✕</button>
+                <h2 class="text-lg font-bold text-white">Pengaturan & Riwayat</h2>
+                <button onclick="toggleModal(false)" class="text-slate-400 text-xl">✕</button>
             </div>
-            
             <div class="space-y-6">
                 <div class="flex items-center justify-between p-4 bg-slate-900 rounded-xl">
-                    <span class="font-medium">Notifikasi Suara</span>
+                    <span class="font-medium text-sm">Notifikasi Suara</span>
                     <button id="toggle-sound" onclick="toggleSound()" class="bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold">Aktif</button>
                 </div>
-
                 <div>
                     <div class="flex justify-between items-center mb-3">
-                        <h3 class="font-bold text-slate-400">Riwayat Selesai</h3>
-                        <button onclick="clearSelesai()" class="text-[10px] bg-red-600/20 text-red-400 px-3 py-1 rounded-lg border border-red-900 hover:bg-red-600 hover:text-white transition">
-                            <i class="fas fa-trash mr-1"></i> Hapus Semua Riwayat
-                        </button>
+                        <h3 class="text-sm font-bold text-slate-400">Riwayat Pesanan</h3>
+                        <button onclick="clearSelesai()" class="text-[10px] bg-red-600/20 text-red-400 px-3 py-1 rounded-lg border border-red-900">Hapus Semua</button>
                     </div>
-                    <div id="container-riwayat" class="space-y-2 max-h-60 overflow-y-auto pr-2"></div>
+                    <div id="container-riwayat" class="space-y-2 max-h-60 overflow-y-auto pr-2 text-xs"></div>
                 </div>
             </div>
         </div>
     </div>
 
     <main class="p-6 max-w-7xl mx-auto">
-        <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+        <h2 class="text-lg font-bold mb-6 flex items-center gap-2">
             <i class="fas fa-receipt text-amber-400"></i> Antrean Aktif
-            <span id="order-count" class="bg-amber-500 text-slate-950 text-xs px-2 py-0.5 rounded-full">0</span>
         </h2>
         <div id="container-antrean" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div id="pesan-kosong" class="col-span-full text-center py-20 text-slate-500">Belum ada pesanan masuk.</div>
@@ -60,12 +55,9 @@
         let isSoundEnabled = true;
 
         function toggleModal(show) { document.getElementById('modal').classList.toggle('hidden', !show); }
-
         function toggleSound() {
             isSoundEnabled = !isSoundEnabled;
-            const btn = document.getElementById('toggle-sound');
-            btn.innerText = isSoundEnabled ? "Aktif" : "Mati";
-            btn.className = isSoundEnabled ? "bg-blue-600 px-4 py-2 rounded-lg text-xs font-bold" : "bg-slate-600 px-4 py-2 rounded-lg text-xs font-bold";
+            document.getElementById('toggle-sound').innerText = isSoundEnabled ? "Aktif" : "Mati";
         }
 
         socket.on('notifikasi-pesanan-baru', (pesanan) => {
@@ -74,25 +66,35 @@
             
             const div = document.createElement('div');
             div.id = pesanan.id_pesanan;
-            div.className = "bg-slate-800 border border-slate-700 p-4 rounded-2xl animate-pulse";
-            div.innerHTML = `<h3 class="font-bold">${pesanan.nama} - Meja ${pesanan.meja}</h3>
-                             <button onclick="selesaiPesanan('${pesanan.id_pesanan}')" class="mt-3 bg-emerald-600 w-full py-2 rounded-lg text-xs font-bold">Selesai</button>`;
+            div.className = "bg-slate-800 border border-slate-700 p-4 rounded-2xl shadow-xl animate-pulse";
+            div.innerHTML = `
+                <div class="flex justify-between mb-2">
+                    <span class="bg-amber-400 text-slate-950 text-[9px] font-black px-2 py-0.5 rounded uppercase">${pesanan.metode}</span>
+                    <span class="text-xs bg-slate-700 px-2 py-1 rounded font-mono">MEJA ${pesanan.meja}</span>
+                </div>
+                <h3 class="font-bold text-white mb-3">${pesanan.nama}</h3>
+                <div class="my-3 bg-slate-900/40 rounded-xl p-3 text-xs">
+                    ${pesanan.items.map(i => `<div class="flex justify-between py-1"><span>${i.name} x${i.quantity}</span><span>Rp ${(i.price*i.quantity).toLocaleString()}</span></div>`).join('')}
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-4">
+                    <button onclick="prosesPesanan('${pesanan.id_pesanan}')" id="btn-p-${pesanan.id_pesanan}" class="bg-amber-500 text-slate-950 text-xs font-bold py-2 rounded-xl">Proses</button>
+                    <button onclick="selesaiPesanan('${pesanan.id_pesanan}')" id="btn-s-${pesanan.id_pesanan}" disabled class="bg-slate-700 text-slate-500 text-xs font-bold py-2 rounded-xl cursor-not-allowed">Selesai</button>
+                </div>`;
             document.getElementById('container-antrean').prepend(div);
-            updateCount(1);
         });
+
+        function prosesPesanan(id) {
+            document.getElementById(`btn-p-${id}`).className = "bg-blue-600 text-white text-xs font-bold py-2 rounded-xl cursor-not-allowed";
+            document.getElementById(`btn-p-${id}`).innerText = "Dibuat...";
+            document.getElementById(`btn-s-${id}`).disabled = false;
+            document.getElementById(`btn-s-${id}`).className = "bg-emerald-600 text-white text-xs font-bold py-2 rounded-xl";
+        }
 
         function selesaiPesanan(id) {
             const card = document.getElementById(id);
-            const riwayat = document.getElementById('container-riwayat');
             card.classList.remove('animate-pulse');
-            card.querySelector('button').remove();
-            riwayat.prepend(card);
-            updateCount(-1);
-        }
-
-        function updateCount(val) {
-            const el = document.getElementById('order-count');
-            el.innerText = parseInt(el.innerText) + val;
+            card.querySelector('.grid').remove();
+            document.getElementById('container-riwayat').prepend(card);
         }
 
         function clearSelesai() {
