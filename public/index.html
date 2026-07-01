@@ -66,13 +66,21 @@
         const socket = io("https://kopral-coffee-central.onrender.com");
         let isSoundEnabled = true;
 
+        // Muat data saat aplikasi dibuka
+        window.onload = () => {
+            const savedRiwayat = localStorage.getItem('kopral_riwayat');
+            if (savedRiwayat) {
+                document.getElementById('container-riwayat').innerHTML = savedRiwayat;
+                if (savedRiwayat.trim() !== "") document.getElementById('pesan-kosong').classList.add('hidden');
+            }
+        };
+
         function toggleModal(show) { document.getElementById('modal').classList.toggle('hidden', !show); }
         function toggleSound() {
             isSoundEnabled = !isSoundEnabled;
             document.getElementById('toggle-sound').innerText = isSoundEnabled ? "Aktif" : "Mati";
         }
 
-        // Fungsi Popup Konfirmasi
         function clearSelesai() { document.getElementById('confirm-modal').classList.remove('hidden'); }
         function hideConfirm() { document.getElementById('confirm-modal').classList.add('hidden'); }
         
@@ -89,6 +97,7 @@
                     count++;
                 }
             });
+            localStorage.setItem('kopral_riwayat', container.innerHTML);
             alert(count > 0 ? `${count} data lama berhasil dihapus.` : "Tidak ada data yang berusia lebih dari 30 hari.");
             hideConfirm();
         }
@@ -128,12 +137,12 @@
             card.classList.remove('animate-pulse');
             card.querySelector('.grid').remove();
             
-            // Tambah Timestamp
             const now = new Date();
             card.setAttribute('data-time', now.getTime());
             card.innerHTML += `<div class="mt-3 text-[10px] text-slate-500 font-mono italic">Selesai: ${now.toLocaleString('id-ID')}</div>`;
             
             document.getElementById('container-riwayat').prepend(card);
+            localStorage.setItem('kopral_riwayat', document.getElementById('container-riwayat').innerHTML);
         }
     </script>
 </body>
