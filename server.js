@@ -11,11 +11,15 @@ const io = new Server(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"]
-    }
+    },
+    // FITUR BARU: Mengizinkan ukuran buffer hingga 10MB untuk menangani data gambar/bukti transfer
+    maxHttpBufferSize: 10 * 1024 * 1024 
 });
 
 // Middleware untuk membaca data JSON dan mengizinkan akses lintas domain (CORS)
-app.use(express.json());
+// Catatan: Express secara default juga memiliki limit, untuk amannya jika ada error, 
+// tambahkan app.use(express.json({ limit: '10mb' })); di bawah ini.
+app.use(express.json({ limit: '10mb' }));
 
 // UBAH DI BAGIAN INI: Mengizinkan metode OPTIONS, GET, POST agar aman dari blokir browser lokal
 app.use((req, res, next) => {
