@@ -22,10 +22,13 @@
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
     <!-- Modal Bukti Transfer -->
-    <div id="modal-bukti" class="fixed inset-0 z-[100] flex items-center justify-center p-4 hidden bg-black/90">
-        <div onclick="hideBukti()" class="absolute inset-0"></div>
-        <img id="img-bukti" src="" class="relative max-w-full max-h-[80vh] rounded-xl border border-slate-700 shadow-2xl">
-        <button onclick="hideBukti()" class="absolute top-5 right-5 text-white text-3xl hover:text-red-500"><i class="fas fa-times"></i></button>
+    <div id="modal-bukti" class="fixed inset-0 z-[100] flex items-center justify-center p-2 hidden bg-black/95">
+        <button onclick="hideBukti()" class="absolute top-4 right-4 z-[101] text-white w-12 h-12 flex items-center justify-center rounded-full bg-slate-800/50 backdrop-blur shadow-lg border border-slate-600 text-2xl">
+            <i class="fas fa-times"></i>
+        </button>
+        <img id="img-bukti" src="" class="max-w-full max-h-[85vh] object-contain rounded-lg">
+        <div class="absolute bottom-4 text-slate-500 text-[10px] uppercase font-bold tracking-widest">Ketuk di luar gambar untuk menutup</div>
+        <div onclick="hideBukti()" class="absolute inset-0 z-[99]"></div>
     </div>
 
     <!-- Overlay Awal -->
@@ -145,9 +148,9 @@
                     <div class="border-t border-slate-700/50 mt-2 pt-2 flex justify-between font-black text-white"><span>TOTAL</span><span>Rp ${totalHarga.toLocaleString()}</span></div>
                 </div>
                 ${pesanan.bukti_transfer ? `
-                    <a href="${pesanan.bukti_transfer}" target="_blank" class="w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-xl transition block text-center">
-                        <i class="fas fa-external-link-alt mr-1"></i> LIHAT BUKTI TRANSFER
-                    </a>
+                    <button onclick="showBukti('${pesanan.bukti_transfer}')" class="w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-xl transition block text-center">
+                        <i class="fas fa-image mr-1"></i> LIHAT BUKTI TRANSFER
+                    </button>
                 ` : ''}
                 <div class="grid grid-cols-1 gap-3">
                     ${isCash ? `<button id="btn-bayar-${pesanan.id_pesanan}" onclick="konfirmasiBayar('${pesanan.id_pesanan}')" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-3 rounded-2xl transition"><i class="fas fa-hand-holding-usd"></i> KONFIRMASI BAYAR</button>` : ''}
@@ -162,11 +165,17 @@
             document.getElementById('container-antrean').prepend(div);
         }
 
-        function showBukti(base64) {
-            document.getElementById('img-bukti').src = base64;
-            document.getElementById('modal-bukti').classList.remove('hidden');
+        function showBukti(url) {
+            const modal = document.getElementById('modal-bukti');
+            const img = document.getElementById('img-bukti');
+            img.src = url;
+            modal.classList.remove('hidden');
         }
-        function hideBukti() { document.getElementById('modal-bukti').classList.add('hidden'); }
+
+        function hideBukti() { 
+            document.getElementById('modal-bukti').classList.add('hidden'); 
+            document.getElementById('img-bukti').src = "";
+        }
 
         function konfirmasiBayar(id) {
             Swal.fire({
