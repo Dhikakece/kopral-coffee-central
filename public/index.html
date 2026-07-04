@@ -16,18 +16,19 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
         html, body { overscroll-behavior-y: none; }
         #container-riwayat { touch-action: pan-y; overscroll-behavior-y: contain; }
-        /* Style baru untuk label tipe pesanan */
         .badge-order-type { display: inline-block; background-color: #334155; color: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; border: 1px solid #475569; margin-top: 5px; }
     </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
+    <!-- Modal Bukti Transfer -->
     <div id="modal-bukti" class="fixed inset-0 z-[100] flex items-center justify-center p-4 hidden bg-black/90">
         <div onclick="hideBukti()" class="absolute inset-0"></div>
         <img id="img-bukti" src="" class="relative max-w-full max-h-[80vh] rounded-xl border border-slate-700 shadow-2xl">
         <button onclick="hideBukti()" class="absolute top-5 right-5 text-white text-3xl hover:text-red-500"><i class="fas fa-times"></i></button>
     </div>
 
+    <!-- Overlay Awal -->
     <div id="start-overlay" class="fixed inset-0 bg-slate-950 z-[9999] flex items-center justify-center">
         <button onclick="startApp()" id="btn-start-app" class="bg-amber-500 text-slate-950 font-bold px-10 py-4 rounded-2xl animate-pulse shadow-2xl text-lg">MULAI APLIKASI KASIR</button>
     </div>
@@ -37,6 +38,7 @@
         <button onclick="toggleModal(true)" class="bg-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-600 transition">Pengaturan</button>
     </header>
 
+    <!-- Modal Pengaturan -->
     <div id="modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden transition-all duration-300">
         <div onclick="toggleModal(false)" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-xl bg-slate-800/90 border border-slate-700/50 rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
@@ -107,8 +109,6 @@
         function displayOrderUI(pesanan) {
             const totalHarga = pesanan.items.reduce((acc, i) => acc + (parseFloat(i.price) * parseInt(i.quantity)), 0);
             const isCash = pesanan.pembayaran === 'Cash';
-            
-            // Perbaikan Logika: Mengecek properti 'metode' yang dikirim dari web pelanggan
             const orderTypeLabel = pesanan.metode === 'Dine-In' ? '🍽️ Makan di Tempat' : '🛍️ Bawa Pulang';
             
             const div = document.createElement('div');
@@ -144,9 +144,7 @@
                     `).join('')}
                     <div class="border-t border-slate-700/50 mt-2 pt-2 flex justify-between font-black text-white"><span>TOTAL</span><span>Rp ${totalHarga.toLocaleString()}</span></div>
                 </div>
-                
                 ${pesanan.bukti_transfer ? `<button onclick="showBukti('${pesanan.bukti_transfer}')" class="w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-xl transition"><i class="fas fa-image mr-1"></i> LIHAT BUKTI TRANSFER</button>` : ''}
-                
                 <div class="grid grid-cols-1 gap-3">
                     ${isCash ? `<button id="btn-bayar-${pesanan.id_pesanan}" onclick="konfirmasiBayar('${pesanan.id_pesanan}')" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-3 rounded-2xl transition"><i class="fas fa-hand-holding-usd"></i> KONFIRMASI BAYAR</button>` : ''}
                     <div class="grid grid-cols-2 gap-3">
@@ -215,6 +213,7 @@
                 const dataPesanan = {
                     html: cardClone.innerHTML,
                     items: activeOrders[id].items,
+                    pembayaran: activeOrders[id].pembayaran,
                     timestamp: new Date().getTime(),
                     tanggal: new Date().toISOString().split('T')[0]
                 };
@@ -232,16 +231,82 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
+            
             if (riwayat.length === 0) { Swal.fire('Oops', 'Data kosong', 'info'); return; }
-            let summary = {};
-            riwayat.forEach(r => r.items.forEach(i => {
-                if(!summary[i.name]) summary[i.name] = { qty: 0, price: i.price };
-                summary[i.name].qty += parseInt(i.quantity);
-            }));
-            let body = Object.keys(summary).map(name => [name, summary[name].qty, Number(summary[name].price).toLocaleString(), (summary[name].qty * summary[name].price).toLocaleString()]);
-            doc.text("LAPORAN PENJUALAN", 14, 15);
-            doc.autoTable({ head: [['Nama Item', 'Qty', 'Harga', 'Subtotal']], body: body });
-            doc.save('Laporan_Penjualan.pdf');
+
+            // Logika pemisahan kategori yang diperbarui agar lebih akurat
+            const getKategori = (name) => {
+                const n = name.toLowerCase();
+                
+                // 1. Kopi/Coffee
+                if (n.includes('kopi') || n.includes('coffee') || n.includes('espresso') || n.includes('latte') || n.includes('americano') || n.includes('cappuccino')) {
+                    return 'Coffee';
+                }
+                
+                // 2. Snack & Food (Daftar diperluas agar item baru masuk ke sini)
+                const snackKeywords = ['snack', 'food', 'makan', 'gorengan', 'camilan', 'mie', 'nasi', 'fries', 'croissant', 'dimsum', 'toast', 'burger', 'sandwich', 'pastry', 'roti'];
+                if (snackKeywords.some(keyword => n.includes(keyword))) {
+                    return 'Snack & Food';
+                }
+                
+                // 3. Sisanya adalah Non-Coffee
+                return 'Non-Coffee';
+            };
+
+            let dataTerstruktur = { 'Coffee': {}, 'Snack & Food': {}, 'Non-Coffee': {} };
+            let totalCash = 0;
+            let totalTransfer = 0;
+
+            riwayat.forEach(r => {
+                const subtotalOrder = r.items.reduce((acc, i) => acc + (parseFloat(i.price) * parseInt(i.quantity)), 0);
+                
+                if (r.pembayaran === 'Cash') totalCash += subtotalOrder;
+                else totalTransfer += subtotalOrder;
+
+                r.items.forEach(i => {
+                    const kat = getKategori(i.name);
+                    if (!dataTerstruktur[kat]) dataTerstruktur[kat] = {};
+                    
+                    if (!dataTerstruktur[kat][i.name]) {
+                        dataTerstruktur[kat][i.name] = { qty: 0, price: i.price };
+                    }
+                    dataTerstruktur[kat][i.name].qty += parseInt(i.quantity);
+                });
+            });
+
+            doc.setFontSize(16);
+            doc.text("LAPORAN PENJUALAN KOPRAL", 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Total Omzet CASH: Rp ${totalCash.toLocaleString()}`, 14, 25);
+            doc.text(`Total Omzet TRANSFER: Rp ${totalTransfer.toLocaleString()}`, 14, 30);
+            doc.text(`TOTAL KESELURUHAN: Rp ${(totalCash + totalTransfer).toLocaleString()}`, 14, 35);
+
+            let yPos = 45;
+            for (const [kategori, items] of Object.entries(dataTerstruktur)) {
+                if(Object.keys(items).length === 0) continue;
+                
+                doc.setFontSize(12);
+                doc.setFont("helvetica", "bold");
+                doc.text(`Kategori: ${kategori}`, 14, yPos);
+                yPos += 5;
+
+                let body = Object.keys(items).map(name => [
+                    name, 
+                    items[name].qty, 
+                    `Rp ${Number(items[name].price).toLocaleString()}`, 
+                    `Rp ${(items[name].qty * items[name].price).toLocaleString()}`
+                ]);
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Nama Item', 'Qty', 'Harga', 'Subtotal']],
+                    body: body,
+                    theme: 'striped',
+                    headStyles: { fillColor: [51, 65, 85] }
+                });
+                yPos = doc.lastAutoTable.finalY + 10;
+            }
+            doc.save(`Laporan_Penjualan_${new Date().toISOString().split('T')[0]}.pdf`);
         }
 
         function downloadCSV() {
