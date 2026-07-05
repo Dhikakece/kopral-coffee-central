@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="id">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>KOPRAL POS MONITOR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,63 +13,117 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #1e293b; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
-        html, body { overscroll-behavior-y: none; }
-        #container-riwayat { touch-action: pan-y; overscroll-behavior-y: contain; }
-        .badge-order-type { display: inline-block; background-color: #334155; color: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-size: 0.65rem; border: 1px solid #475569; margin-top: 5px; }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 10px;
+        }
+
+        html,
+        body {
+            overscroll-behavior-y: none;
+        }
+
+        #container-riwayat {
+            touch-action: pan-y;
+            overscroll-behavior-y: contain;
+        }
+
+        .badge-order-type {
+            display: inline-block;
+            background-color: #334155;
+            color: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            border: 1px solid #475569;
+            margin-top: 5px;
+        }
     </style>
 </head>
+
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
     <!-- Modal Bukti Transfer -->
     <div id="modal-bukti" class="fixed inset-0 z-[100] flex items-center justify-center p-2 hidden bg-black/95">
-        <button onclick="hideBukti()" class="absolute top-4 right-4 z-[101] text-white w-12 h-12 flex items-center justify-center rounded-full bg-slate-800/50 backdrop-blur shadow-lg border border-slate-600 text-2xl">
+        <button onclick="hideBukti()"
+            class="absolute top-4 right-4 z-[101] text-white w-12 h-12 flex items-center justify-center rounded-full bg-slate-800/50 backdrop-blur shadow-lg border border-slate-600 text-2xl">
             <i class="fas fa-times"></i>
         </button>
         <img id="img-bukti" src="" class="max-w-full max-h-[85vh] object-contain rounded-lg">
-        <div class="absolute bottom-4 text-slate-500 text-[10px] uppercase font-bold tracking-widest">Ketuk di luar gambar untuk menutup</div>
+        <div class="absolute bottom-4 text-slate-500 text-[10px] uppercase font-bold tracking-widest">Ketuk di luar
+            gambar untuk menutup</div>
         <div onclick="hideBukti()" class="absolute inset-0 z-[99]"></div>
     </div>
 
     <!-- Overlay Awal -->
     <div id="start-overlay" class="fixed inset-0 bg-slate-950 z-[9999] flex items-center justify-center">
-        <button onclick="startApp()" id="btn-start-app" class="bg-amber-500 text-slate-950 font-bold px-10 py-4 rounded-2xl animate-pulse shadow-2xl text-lg">MULAI APLIKASI KASIR</button>
+        <button onclick="startApp()" id="btn-start-app"
+            class="bg-amber-500 text-slate-950 font-bold px-10 py-4 rounded-2xl animate-pulse shadow-2xl text-lg">MULAI
+            APLIKASI KASIR</button>
     </div>
 
-    <header class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
+    <header
+        class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
         <h1 class="font-bold text-white">KOPRAL <span class="text-amber-400">POS MONITOR</span></h1>
-        <button onclick="toggleModal(true)" class="bg-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-600 transition">Pengaturan</button>
+        <div class="flex items-center gap-4">
+            <!-- Indikator Koneksi -->
+            <div id="status-koneksi" class="flex items-center gap-2 text-[9px] font-bold text-slate-500">
+                <span id="dot-status" class="w-2 h-2 rounded-full bg-slate-600"></span>
+                <span id="text-status">OFFLINE</span>
+            </div>
+            <button onclick="toggleModal(true)"
+                class="bg-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-600 transition">Pengaturan</button>
+        </div>
     </header>
 
     <!-- Modal Pengaturan -->
     <div id="modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden transition-all duration-300">
         <div onclick="toggleModal(false)" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"></div>
-        <div class="relative w-full max-w-xl bg-slate-800/90 border border-slate-700/50 rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+        <div
+            class="relative w-full max-w-xl bg-slate-800/90 border border-slate-700/50 rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
             <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
-                <h2 class="font-bold text-white text-lg flex items-center gap-2"><i class="fas fa-cog text-amber-400"></i> Pengaturan & Riwayat</h2>
-                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-white transition-colors"><i class="fas fa-times"></i></button>
+                <h2 class="font-bold text-white text-lg flex items-center gap-2"><i
+                        class="fas fa-cog text-amber-400"></i> Pengaturan & Riwayat</h2>
+                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-white transition-colors"><i
+                        class="fas fa-times"></i></button>
             </div>
             <div class="space-y-4">
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Filter Tanggal</label>
-                    <input type="date" id="input-tanggal" onchange="filterRiwayat()" class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-xl text-sm focus:border-amber-500 outline-none transition-all">
+                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Filter
+                        Tanggal</label>
+                    <input type="date" id="input-tanggal" onchange="filterRiwayat()"
+                        class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-xl text-sm focus:border-amber-500 outline-none transition-all">
                 </div>
                 <div class="grid grid-cols-1 gap-2">
-                    <button onclick="cetakLaporanPDF()" class="bg-blue-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-blue-700 transition"><i class="fas fa-file-pdf mr-2"></i> CETAK PDF</button>
-                    <button onclick="downloadCSV()" class="bg-emerald-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-emerald-700 transition"><i class="fas fa-file-csv mr-2"></i> EXPORT CSV (ARSIP)</button>
-                    <button onclick="hapusRiwayatManual()" class="bg-red-500/10 border border-red-500/20 text-red-400 py-3 rounded-xl text-xs font-bold hover:bg-red-500/20 transition"><i class="fas fa-trash mr-2"></i> HAPUS RIWAYAT > 30 HARI</button>
+                    <button onclick="cetakLaporanPDF()"
+                        class="bg-blue-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-blue-700 transition"><i
+                            class="fas fa-file-pdf mr-2"></i> CETAK PDF</button>
+                    <button onclick="downloadCSV()"
+                        class="bg-emerald-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-emerald-700 transition"><i
+                            class="fas fa-file-csv mr-2"></i> EXPORT CSV (ARSIP)</button>
+                    <button onclick="hapusRiwayatManual()"
+                        class="bg-red-500/10 border border-red-500/20 text-red-400 py-3 rounded-xl text-xs font-bold hover:bg-red-500/20 transition"><i
+                            class="fas fa-trash mr-2"></i> HAPUS RIWAYAT > 30 HARI</button>
                 </div>
             </div>
-            <div id="container-riwayat" class="mt-6 space-y-3 text-xs max-h-[300px] overflow-y-auto pr-2 custom-scrollbar"></div>
+            <div id="container-riwayat"
+                class="mt-6 space-y-3 text-xs max-h-[300px] overflow-y-auto pr-2 custom-scrollbar"></div>
         </div>
     </div>
 
     <main class="p-6 max-w-7xl mx-auto">
         <div class="flex items-center gap-3 mb-6">
             <h2 class="text-lg font-bold">Antrean Aktif</h2>
-            <span class="text-[10px] text-slate-500 font-medium italic border-l border-slate-700 pl-3">Created by CyberPapsel</span>
+            <span class="text-[10px] text-slate-500 font-medium italic border-l border-slate-700 pl-3">Created by
+                CyberPapsel</span>
         </div>
         <div id="container-antrean" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div id="pesan-kosong" class="col-span-full text-center py-20 text-slate-500">Belum ada pesanan masuk.</div>
@@ -75,12 +131,59 @@
     </main>
 
     <audio id="notif-sound" src="https://kopral-coffee-central.onrender.com/notification.mp3" preload="auto"></audio>
+    <audio id="warning-sound" src="https://kopral-coffee-central.onrender.com/warning.mp3" preload="auto"></audio>
 
     <script>
         let socket;
         let activeOrders = JSON.parse(localStorage.getItem('kopral_active_orders') || '{}');
+        let warningShown = false;
 
-        window.onload = () => { renderActiveOrders(); };
+        window.onload = () => {
+            renderActiveOrders();
+            setInterval(checkClosingTime, 30000);
+        };
+
+        function updateStatus(isConnected) {
+            const dot = document.getElementById('dot-status');
+            const text = document.getElementById('text-status');
+            if (isConnected) {
+                dot.className = "w-2 h-2 rounded-full bg-green-500 animate-pulse";
+                text.innerText = "ONLINE";
+            } else {
+                dot.className = "w-2 h-2 rounded-full bg-red-500";
+                text.innerText = "OFFLINE - RECONNECTING...";
+            }
+        }
+
+        function checkClosingTime() {
+            const now = new Date();
+            const hours = now.getHours();
+            const minutes = now.getMinutes();
+            if (hours === 23 && minutes >= 55) {
+                showClosingWarning();
+            } else {
+                warningShown = false;
+            }
+        }
+
+        function showClosingWarning() {
+            if (warningShown) return;
+
+            // Memanggil suara dengan cara yang sama seperti notif pesanan masuk
+            const audio = document.getElementById('warning-sound');
+            audio.play().catch(error => console.log("Audio play failed:", error));
+
+            Swal.fire({
+                title: '⚠️ PERINGATAN TUTUP HARI',
+                html: 'Sudah mendekati jam 00:00! Segera selesaikan atau hapus pesanan yang menggantung agar data penjualan hari ini akurat.',
+                icon: 'warning',
+                confirmButtonColor: '#d97706',
+                confirmButtonText: 'Siap, Mengerti!',
+                allowOutsideClick: false
+            });
+
+            warningShown = true;
+        }
 
         function renderActiveOrders() {
             const container = document.getElementById('container-antrean');
@@ -88,7 +191,7 @@
             const orders = Object.values(activeOrders);
             if (orders.length > 0) {
                 document.getElementById('pesan-kosong').classList.add('hidden');
-                orders.reverse().forEach(pesanan => { displayOrderUI(pesanan); });
+                orders.sort((a, b) => b.timestamp - a.timestamp).forEach(pesanan => { displayOrderUI(pesanan); });
             } else {
                 document.getElementById('pesan-kosong').classList.remove('hidden');
             }
@@ -97,23 +200,38 @@
         async function startApp() {
             try {
                 const audio = document.getElementById('notif-sound');
-                await audio.play().catch(() => {}); audio.pause();
-                socket = io("https://kopral-coffee-central.onrender.com");
+                await audio.play().catch(() => { }); audio.pause();
+
+                socket = io("https://kopral-coffee-central.onrender.com", {
+                    reconnection: true,
+                    reconnectionAttempts: Infinity,
+                    reconnectionDelay: 1000
+                });
+
+                socket.on('connect', () => updateStatus(true));
+                socket.on('disconnect', () => updateStatus(false));
+                socket.on('connect_error', () => updateStatus(false));
+
                 socket.on('notifikasi-pesanan-baru', (pesanan) => {
+                    pesanan.timestamp = pesanan.timestamp || new Date().getTime();
                     activeOrders[pesanan.id_pesanan] = pesanan;
                     localStorage.setItem('kopral_active_orders', JSON.stringify(activeOrders));
                     renderActiveOrders();
-                    document.getElementById('notif-sound').play().catch(() => {});
+                    document.getElementById('notif-sound').play().catch(() => { });
                 });
+
                 document.getElementById('start-overlay').style.display = 'none';
-            } catch (err) { alert("Gagal terhubung"); }
+            } catch (err) {
+                Swal.fire('Error', 'Gagal terhubung ke server', 'error');
+            }
         }
 
         function displayOrderUI(pesanan) {
+            const waktuMasuk = pesanan.timestamp ? new Date(pesanan.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '--:--';
             const totalHarga = pesanan.items.reduce((acc, i) => acc + (parseFloat(i.price) * parseInt(i.quantity)), 0);
             const isCash = pesanan.pembayaran === 'Cash';
             const orderTypeLabel = pesanan.metode === 'Dine-In' ? '🍽️ Makan di Tempat' : '🛍️ Bawa Pulang';
-            
+
             const div = document.createElement('div');
             div.id = pesanan.id_pesanan;
             div.className = "group bg-slate-800 border border-slate-700 p-5 rounded-3xl shadow-2xl";
@@ -121,42 +239,25 @@
                 <div class="flex justify-between items-start mb-4">
                     <div>
                         <h3 class="font-bold text-white text-lg">${pesanan.nama}</h3>
-                        <div class="flex gap-2">
-                            <span class="inline-block mt-1 bg-amber-500/10 text-amber-500 text-[10px] font-bold px-3 py-1 rounded-full border border-amber-500/20">MEJA ${pesanan.meja}</span>
-                            <span class="inline-block mt-1 badge-order-type">${orderTypeLabel}</span>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="bg-amber-500/10 text-amber-500 text-[10px] font-bold px-3 py-1 rounded-full border border-amber-500/20">MEJA ${pesanan.meja}</span>
+                            <span class="badge-order-type">${orderTypeLabel}</span>
                         </div>
-                        <div class="mt-2 text-[10px] font-bold ${isCash ? 'text-red-400' : 'text-blue-400'} uppercase">
-                             <i class="fas ${isCash ? 'fa-money-bill' : 'fa-credit-card'} mr-1"></i> ${pesanan.pembayaran || 'Transfer'}
-                        </div>
-                        ${pesanan.nama_pengirim ? `
-                            <div class="mt-2 bg-slate-900 border border-blue-500/30 p-2 rounded-lg text-[10px] text-blue-300">
-                                <span class="font-bold uppercase">Nama Pemilik Rekening Transfer:</span> ${pesanan.nama_pengirim}
-                            </div>
-                        ` : ''}
+                        <div class="mt-2 text-[10px] text-slate-400 font-bold"><i class="fas fa-clock mr-1"></i> Jam Masuk: ${waktuMasuk}</div>
+                        <div class="mt-2 text-[10px] font-bold ${isCash ? 'text-red-400' : 'text-blue-400'} uppercase"><i class="fas ${isCash ? 'fa-money-bill' : 'fa-credit-card'} mr-1"></i> ${pesanan.pembayaran || 'Transfer'}</div>
+                        ${pesanan.nama_pengirim ? `<div class="mt-2 bg-slate-900 border border-blue-500/30 p-2 rounded-lg text-[10px] text-blue-300"><span class="font-bold uppercase">Nama Pengirim:</span> ${pesanan.nama_pengirim}</div>` : ''}
                     </div>
                 </div>
                 <div class="bg-slate-900/50 rounded-2xl p-4 space-y-2 mb-4">
-                    ${pesanan.items.map(i => `
-                        <div class="flex flex-col mb-2">
-                            <div class="flex justify-between text-sm">
-                                <span class="text-slate-300">${i.quantity}x ${i.name}</span>
-                                <span class="font-medium text-slate-100">Rp ${Number(i.price).toLocaleString()}</span>
-                            </div>
-                            ${i.note ? `<span class="text-[10px] text-amber-400 italic mt-0.5">• Catatan: ${i.note}</span>` : ''}
-                        </div>
-                    `).join('')}
+                    ${pesanan.items.map(i => `<div class="flex flex-col mb-2"><div class="flex justify-between text-sm"><span class="text-slate-300">${i.quantity}x ${i.name}</span><span class="font-medium text-slate-100">Rp ${Number(i.price).toLocaleString()}</span></div>${i.note ? `<span class="text-[10px] text-amber-400 italic mt-0.5">• Catatan: ${i.note}</span>` : ''}</div>`).join('')}
                     <div class="border-t border-slate-700/50 mt-2 pt-2 flex justify-between font-black text-white"><span>TOTAL</span><span>Rp ${totalHarga.toLocaleString()}</span></div>
                 </div>
-                ${pesanan.bukti_transfer ? `
-                    <button onclick="showBukti('${pesanan.bukti_transfer}')" class="w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-xl transition block text-center">
-                        <i class="fas fa-image mr-1"></i> LIHAT BUKTI TRANSFER
-                    </button>
-                ` : ''}
+                ${pesanan.bukti_transfer ? `<button onclick="showBukti('${pesanan.bukti_transfer}')" class="w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-xl transition block text-center"><i class="fas fa-image mr-1"></i> LIHAT BUKTI TRANSFER</button>` : ''}
                 <div class="grid grid-cols-1 gap-3">
                     ${isCash ? `<button id="btn-bayar-${pesanan.id_pesanan}" onclick="konfirmasiBayar('${pesanan.id_pesanan}')" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-3 rounded-2xl transition"><i class="fas fa-hand-holding-usd"></i> KONFIRMASI BAYAR</button>` : ''}
                     <div class="grid grid-cols-2 gap-3">
                         <button id="btn-proses-${pesanan.id_pesanan}" onclick="prosesPesanan('${pesanan.id_pesanan}')" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold py-3 rounded-2xl transition"><i class="fas fa-clock"></i> PROSES</button>
-                        <button id="btn-selesai-${pesanan.id_pesanan}" ${isCash ? 'disabled class="bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed text-xs font-bold py-3 rounded-2xl transition"' : 'onclick="selesaiPesanan(\''+pesanan.id_pesanan+'\')" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-3 rounded-2xl transition"'}>
+                        <button id="btn-selesai-${pesanan.id_pesanan}" ${isCash ? 'disabled class="bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed text-xs font-bold py-3 rounded-2xl transition"' : 'onclick="selesaiPesanan(\'' + pesanan.id_pesanan + '\')" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-3 rounded-2xl transition"'}>
                             <i class="fas fa-check"></i> SELESAI
                         </button>
                     </div>
@@ -172,8 +273,8 @@
             modal.classList.remove('hidden');
         }
 
-        function hideBukti() { 
-            document.getElementById('modal-bukti').classList.add('hidden'); 
+        function hideBukti() {
+            document.getElementById('modal-bukti').classList.add('hidden');
             document.getElementById('img-bukti').src = "";
         }
 
@@ -194,7 +295,7 @@
                     btnBaru.id = `btn-selesai-${id}`;
                     btnBaru.className = "bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-3 rounded-2xl transition col-span-2";
                     btnBaru.innerHTML = '<i class="fas fa-check"></i> SELESAI';
-                    btnBaru.onclick = function() { selesaiPesanan(id); };
+                    btnBaru.onclick = function () { selesaiPesanan(id); };
                     containerTombol.appendChild(btnBaru);
                     if (btnBayar) btnBayar.style.display = 'none';
                     Swal.fire('Berhasil!', 'Pembayaran dikonfirmasi.', 'success');
@@ -236,7 +337,7 @@
                 delete activeOrders[id];
                 localStorage.setItem('kopral_active_orders', JSON.stringify(activeOrders));
                 card.remove();
-                if(Object.keys(activeOrders).length === 0) document.getElementById('pesan-kosong').classList.remove('hidden');
+                if (Object.keys(activeOrders).length === 0) document.getElementById('pesan-kosong').classList.remove('hidden');
             }
         }
 
@@ -244,7 +345,6 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             const riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
-            
             if (riwayat.length === 0) { Swal.fire('Oops', 'Data kosong', 'info'); return; }
 
             const getKategori = (name) => {
@@ -280,7 +380,7 @@
 
             let yPos = 45;
             for (const [kategori, items] of Object.entries(dataTerstruktur)) {
-                if(Object.keys(items).length === 0) continue;
+                if (Object.keys(items).length === 0) continue;
                 doc.setFontSize(12);
                 doc.setFont("helvetica", "bold");
                 doc.text(`Kategori: ${kategori}`, 14, yPos);
@@ -328,16 +428,17 @@
             let riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
             const batas = new Date(); batas.setDate(batas.getDate() - 30);
             const dataBaru = riwayat.filter(i => new Date(i.timestamp) >= batas);
-            if(dataBaru.length === riwayat.length) { Swal.fire('Info', 'Tidak ada riwayat lama (>30 hari) untuk dihapus.', 'info'); return; }
+            if (dataBaru.length === riwayat.length) { Swal.fire('Info', 'Tidak ada riwayat lama (>30 hari) untuk dihapus.', 'info'); return; }
             Swal.fire({ title: 'Hapus Riwayat Lama?', text: "Hanya data > 30 hari yang akan dihapus.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Ya, Hapus!' }).then((result) => {
                 if (result.isConfirmed) { localStorage.setItem('kopral_riwayat_data', JSON.stringify(dataBaru)); filterRiwayat(); Swal.fire('Dihapus!', 'Riwayat lama berhasil dibersihkan.', 'success'); }
             });
         }
 
-        function toggleModal(show) { 
-            document.getElementById('modal').classList.toggle('hidden', !show); 
-            if(show) { document.getElementById('input-tanggal').value = new Date().toISOString().split('T')[0]; filterRiwayat(); } 
+        function toggleModal(show) {
+            document.getElementById('modal').classList.toggle('hidden', !show);
+            if (show) { document.getElementById('input-tanggal').value = new Date().toISOString().split('T')[0]; filterRiwayat(); }
         }
     </script>
 </body>
+
 </html>
