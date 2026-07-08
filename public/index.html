@@ -13,6 +13,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
+        /* Pengaturan Scrollbar */
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
         }
@@ -26,6 +27,7 @@
             border-radius: 10px;
         }
 
+        /* Perilaku Scroll */
         html,
         body {
             overscroll-behavior-y: none;
@@ -36,6 +38,7 @@
             overscroll-behavior-y: contain;
         }
 
+        /* Badge Tipe Order */
         .badge-order-type {
             display: inline-block;
             background-color: #334155;
@@ -46,399 +49,657 @@
             border: 1px solid #475569;
             margin-top: 5px;
         }
+
+        /* Style untuk Watermark Logo */
+        .app-container {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo-watermark {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 400px;
+            opacity: 0.08;
+            /* Transparansi samar */
+            pointer-events: none;
+            /* Supaya klik tetap menembus ke elemen di bawahnya */
+            z-index: 0;
+        }
+
+        main {
+            position: relative;
+            z-index: 1;
+        }
     </style>
 </head>
 
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+    <div class="app-container">
+        <!-- Logo di sini -->
+        <img src="assets/watermark.png" class="logo-watermark" alt="Logo">
 
-    <!-- Modal Bukti Transfer -->
-    <div id="modal-bukti" class="fixed inset-0 z-[100] flex items-center justify-center p-2 hidden bg-black/95">
-        <button onclick="hideBukti()"
-            class="absolute top-4 right-4 z-[101] text-white w-12 h-12 flex items-center justify-center rounded-full bg-slate-800/50 backdrop-blur shadow-lg border border-slate-600 text-2xl">
-            <i class="fas fa-times"></i>
-        </button>
-        <img id="img-bukti" src="" class="max-w-full max-h-[85vh] object-contain rounded-lg">
-        <div class="absolute bottom-4 text-slate-500 text-[10px] uppercase font-bold tracking-widest">Ketuk di luar
-            gambar untuk menutup</div>
-        <div onclick="hideBukti()" class="absolute inset-0 z-[99]"></div>
-    </div>
-
-    <!-- Overlay Awal -->
-    <div id="start-overlay" class="fixed inset-0 bg-slate-950 z-[9999] flex items-center justify-center">
-        <button onclick="startApp()" id="btn-start-app"
-            class="bg-amber-500 text-slate-950 font-bold px-10 py-4 rounded-2xl animate-pulse shadow-2xl text-lg">MULAI
-            APLIKASI KASIR</button>
-    </div>
-
-    <header
-        class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
-        <h1 class="font-bold text-white">KOPRAL <span class="text-amber-400">POS MONITOR</span></h1>
-        <div class="flex items-center gap-4">
-            <!-- Indikator Koneksi -->
-            <div id="status-koneksi" class="flex items-center gap-2 text-[9px] font-bold text-slate-500">
-                <span id="dot-status" class="w-2 h-2 rounded-full bg-slate-600"></span>
-                <span id="text-status">OFFLINE</span>
-            </div>
-            <button onclick="toggleModal(true)"
-                class="bg-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-600 transition">Pengaturan</button>
+        <!-- Modal Bukti Transfer -->
+        <div id="modal-bukti" class="fixed inset-0 z-[100] flex items-center justify-center p-2 hidden bg-black/95">
+            <button onclick="hideBukti()"
+                class="absolute top-4 right-4 z-[101] text-white w-12 h-12 flex items-center justify-center rounded-full bg-slate-800/50 backdrop-blur shadow-lg border border-slate-600 text-2xl">
+                <i class="fas fa-times"></i>
+            </button>
+            <img id="img-bukti" src="" class="max-w-full max-h-[85vh] object-contain rounded-lg">
+            <div class="absolute bottom-4 text-slate-500 text-[10px] uppercase font-bold tracking-widest">Ketuk di luar
+                gambar untuk menutup</div>
+            <div onclick="hideBukti()" class="absolute inset-0 z-[99]"></div>
         </div>
-    </header>
 
-    <!-- Modal Pengaturan -->
-    <div id="modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden transition-all duration-300">
-        <div onclick="toggleModal(false)" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"></div>
-        <div
-            class="relative w-full max-w-xl bg-slate-800/90 border border-slate-700/50 rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
-            <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
-                <h2 class="font-bold text-white text-lg flex items-center gap-2"><i
-                        class="fas fa-cog text-amber-400"></i> Pengaturan & Riwayat</h2>
-                <button onclick="toggleModal(false)" class="text-slate-400 hover:text-white transition-colors"><i
-                        class="fas fa-times"></i></button>
-            </div>
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Filter
-                        Tanggal</label>
-                    <input type="date" id="input-tanggal" onchange="filterRiwayat()"
-                        class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-xl text-sm focus:border-amber-500 outline-none transition-all">
+        <!-- Login Modern -->
+        <div id="login-form-container"
+            class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm transition-all duration-500">
+            <div
+                class="bg-slate-900/90 border border-slate-700/50 p-8 rounded-[2rem] w-full max-w-sm shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-black text-white tracking-tight">LOGIN</h2>
+                    <div class="mt-2 text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]">Admin <span
+                            class="text-amber-500">/</span> Dapur</div>
                 </div>
-                <div class="grid grid-cols-1 gap-2">
-                    <button onclick="cetakLaporanPDF()"
-                        class="bg-blue-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-blue-700 transition"><i
-                            class="fas fa-file-pdf mr-2"></i> CETAK PDF</button>
-                    <button onclick="downloadCSV()"
-                        class="bg-emerald-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-emerald-700 transition"><i
-                            class="fas fa-file-csv mr-2"></i> EXPORT CSV (ARSIP)</button>
-                    <button onclick="hapusRiwayatManual()"
-                        class="bg-red-500/10 border border-red-500/20 text-red-400 py-3 rounded-xl text-xs font-bold hover:bg-red-500/20 transition"><i
-                            class="fas fa-trash mr-2"></i> HAPUS RIWAYAT > 30 HARI</button>
-                </div>
-            </div>
-            <div id="container-riwayat"
-                class="mt-6 space-y-3 text-xs max-h-[300px] overflow-y-auto pr-2 custom-scrollbar"></div>
-        </div>
-    </div>
-
-    <main class="p-6 max-w-7xl mx-auto">
-        <div class="flex items-center gap-3 mb-6">
-            <h2 class="text-lg font-bold">Antrean Aktif</h2>
-            <span class="text-[10px] text-slate-500 font-medium italic border-l border-slate-700 pl-3">Created by
-                CyberPapsel</span>
-        </div>
-        <div id="container-antrean" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div id="pesan-kosong" class="col-span-full text-center py-20 text-slate-500">Belum ada pesanan masuk.</div>
-        </div>
-    </main>
-
-    <audio id="notif-sound" src="https://kopral-coffee-central.onrender.com/notification.mp3" preload="auto"></audio>
-    <audio id="warning-sound" src="https://kopral-coffee-central.onrender.com/warning.mp3" preload="auto"></audio>
-
-    <script>
-        let socket;
-        let activeOrders = JSON.parse(localStorage.getItem('kopral_active_orders') || '{}');
-        let warningShown = false;
-
-        window.onload = () => {
-            renderActiveOrders();
-            setInterval(checkClosingTime, 30000);
-        };
-
-        function updateStatus(isConnected) {
-            const dot = document.getElementById('dot-status');
-            const text = document.getElementById('text-status');
-            if (isConnected) {
-                dot.className = "w-2 h-2 rounded-full bg-green-500 animate-pulse";
-                text.innerText = "ONLINE";
-            } else {
-                dot.className = "w-2 h-2 rounded-full bg-red-500";
-                text.innerText = "OFFLINE - RECONNECTING...";
-            }
-        }
-
-        function checkClosingTime() {
-            const now = new Date();
-            const hours = now.getHours();
-            const minutes = now.getMinutes();
-            if (hours === 23 && minutes >= 55) {
-                showClosingWarning();
-            } else {
-                warningShown = false;
-            }
-        }
-
-        function showClosingWarning() {
-            if (warningShown) return;
-
-            // Memanggil suara dengan cara yang sama seperti notif pesanan masuk
-            const audio = document.getElementById('warning-sound');
-            audio.play().catch(error => console.log("Audio play failed:", error));
-
-            Swal.fire({
-                title: '⚠️ PERINGATAN TUTUP HARI',
-                html: 'Sudah mendekati jam 00:00! Segera selesaikan atau hapus pesanan yang menggantung agar data penjualan hari ini akurat.',
-                icon: 'warning',
-                confirmButtonColor: '#d97706',
-                confirmButtonText: 'Siap, Mengerti!',
-                allowOutsideClick: false
-            });
-
-            warningShown = true;
-        }
-
-        function renderActiveOrders() {
-            const container = document.getElementById('container-antrean');
-            document.querySelectorAll('.group').forEach(el => el.remove());
-            const orders = Object.values(activeOrders);
-            if (orders.length > 0) {
-                document.getElementById('pesan-kosong').classList.add('hidden');
-                orders.sort((a, b) => b.timestamp - a.timestamp).forEach(pesanan => { displayOrderUI(pesanan); });
-            } else {
-                document.getElementById('pesan-kosong').classList.remove('hidden');
-            }
-        }
-
-        async function startApp() {
-            try {
-                const audio = document.getElementById('notif-sound');
-                await audio.play().catch(() => { }); audio.pause();
-
-                socket = io("https://kopral-coffee-central.onrender.com", {
-                    reconnection: true,
-                    reconnectionAttempts: Infinity,
-                    reconnectionDelay: 1000
-                });
-
-                socket.on('connect', () => updateStatus(true));
-                socket.on('disconnect', () => updateStatus(false));
-                socket.on('connect_error', () => updateStatus(false));
-
-                socket.on('notifikasi-pesanan-baru', (pesanan) => {
-                    pesanan.timestamp = pesanan.timestamp || new Date().getTime();
-                    activeOrders[pesanan.id_pesanan] = pesanan;
-                    localStorage.setItem('kopral_active_orders', JSON.stringify(activeOrders));
-                    renderActiveOrders();
-                    document.getElementById('notif-sound').play().catch(() => { });
-                });
-
-                document.getElementById('start-overlay').style.display = 'none';
-            } catch (err) {
-                Swal.fire('Error', 'Gagal terhubung ke server', 'error');
-            }
-        }
-
-        function displayOrderUI(pesanan) {
-            const waktuMasuk = pesanan.timestamp ? new Date(pesanan.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-            const totalHarga = pesanan.items.reduce((acc, i) => acc + (parseFloat(i.price) * parseInt(i.quantity)), 0);
-            const isCash = pesanan.pembayaran === 'Cash';
-            const orderTypeLabel = pesanan.metode === 'Dine-In' ? '🍽️ Makan di Tempat' : '🛍️ Bawa Pulang';
-
-            const div = document.createElement('div');
-            div.id = pesanan.id_pesanan;
-            div.className = "group bg-slate-800 border border-slate-700 p-5 rounded-3xl shadow-2xl";
-            div.innerHTML = `
-                <div class="flex justify-between items-start mb-4">
+                <div class="space-y-4">
                     <div>
-                        <h3 class="font-bold text-white text-lg">${pesanan.nama}</h3>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="bg-amber-500/10 text-amber-500 text-[10px] font-bold px-3 py-1 rounded-full border border-amber-500/20">MEJA ${pesanan.meja}</span>
-                            <span class="badge-order-type">${orderTypeLabel}</span>
-                        </div>
-                        <div class="mt-2 text-[10px] text-slate-400 font-bold"><i class="fas fa-clock mr-1"></i> Jam Masuk: ${waktuMasuk}</div>
-                        <div class="mt-2 text-[10px] font-bold ${isCash ? 'text-red-400' : 'text-blue-400'} uppercase"><i class="fas ${isCash ? 'fa-money-bill' : 'fa-credit-card'} mr-1"></i> ${pesanan.pembayaran || 'Transfer'}</div>
-                        ${pesanan.nama_pengirim ? `<div class="mt-2 bg-slate-900 border border-blue-500/30 p-2 rounded-lg text-[10px] text-blue-300"><span class="font-bold uppercase">Nama Rekening Transfer:</span> ${pesanan.nama_pengirim}</div>` : ''}
+                        <input type="text" id="input-username" placeholder="USERNAME"
+                            class="w-full bg-slate-950 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-slate-600">
+                        <p id="error-user"
+                            class="text-red-500 text-[9px] mt-1 ml-2 font-bold hidden opacity-0 transition-opacity">*
+                            USERNAME : SALAH</p>
                     </div>
+                    <div>
+                        <input type="password" id="input-password" placeholder="PASSWORD"
+                            class="w-full bg-slate-950 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-slate-600">
+                        <p id="error-pass"
+                            class="text-red-500 text-[9px] mt-1 ml-2 font-bold hidden opacity-0 transition-opacity">*
+                            PASSWORD : SALAH</p>
+                    </div>
+                    <button onclick="prosesLogin()"
+                        class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-4 rounded-2xl mt-4 transition-all transform active:scale-95 shadow-[0_10px_20px_-5px_rgba(245,158,11,0.3)]">MASUK</button>
+                    <p class="text-center text-slate-600 text-[9px] mt-6 font-bold uppercase tracking-widest">! Isi data
+                        dengan benar !</p>
                 </div>
-                <div class="bg-slate-900/50 rounded-2xl p-4 space-y-2 mb-4">
-                    ${pesanan.items.map(i => `<div class="flex flex-col mb-2"><div class="flex justify-between text-sm"><span class="text-slate-300">${i.quantity}x ${i.name}</span><span class="font-medium text-slate-100">Rp ${Number(i.price).toLocaleString()}</span></div>${i.note ? `<span class="text-[10px] text-amber-400 italic mt-0.5">• Catatan: ${i.note}</span>` : ''}</div>`).join('')}
-                    <div class="border-t border-slate-700/50 mt-2 pt-2 flex justify-between font-black text-white"><span>TOTAL</span><span>Rp ${totalHarga.toLocaleString()}</span></div>
+            </div>
+        </div>
+
+        <!-- Header -->
+        <header
+            class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
+            <h1 class="font-bold text-white">KOPRAL <span class="text-amber-400">POS MONITOR</span></h1>
+            <div class="flex items-center gap-4">
+                <div id="status-koneksi" class="flex items-center gap-2 text-[9px] font-bold text-slate-500">
+                    <span id="dot-status" class="w-2 h-2 rounded-full bg-slate-600"></span>
+                    <span id="text-status">OFFLINE</span>
                 </div>
-                ${pesanan.bukti_transfer ? `<button onclick="showBukti('${pesanan.bukti_transfer}')" class="w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-xl transition block text-center"><i class="fas fa-image mr-1"></i> LIHAT BUKTI TRANSFER</button>` : ''}
-                <div class="grid grid-cols-1 gap-3">
-                    ${isCash ? `<button id="btn-bayar-${pesanan.id_pesanan}" onclick="konfirmasiBayar('${pesanan.id_pesanan}')" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-3 rounded-2xl transition"><i class="fas fa-hand-holding-usd"></i> KONFIRMASI BAYAR</button>` : ''}
-                    <div class="grid grid-cols-2 gap-3">
-                        <button id="btn-proses-${pesanan.id_pesanan}" onclick="prosesPesanan('${pesanan.id_pesanan}')" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold py-3 rounded-2xl transition"><i class="fas fa-clock"></i> PROSES</button>
-                        <button id="btn-selesai-${pesanan.id_pesanan}" ${isCash ? 'disabled class="bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed text-xs font-bold py-3 rounded-2xl transition"' : 'onclick="selesaiPesanan(\'' + pesanan.id_pesanan + '\')" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-3 rounded-2xl transition"'}>
-                            <i class="fas fa-check"></i> SELESAI
+                <button onclick="toggleModal(true)"
+                    class="bg-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-600 transition">Pengaturan</button>
+            </div>
+        </header>
+
+        <!-- Overlay Awal -->
+        <div id="start-overlay" class="fixed inset-0 bg-slate-950 z-[9999] flex items-center justify-center">
+            <button onclick="startApp()" id="btn-start-app"
+                class="bg-amber-500 text-slate-950 font-bold px-10 py-4 rounded-2xl animate-pulse shadow-2xl text-lg">MULAI
+                APLIKASI KASIR</button>
+        </div>
+
+        <!-- Modal Pengaturan -->
+        <div id="modal"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden transition-all duration-300">
+            <div onclick="toggleModal(false)" class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"></div>
+            <div
+                class="relative w-full max-w-xl bg-slate-800/90 border border-slate-700/50 rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+                <div class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+                    <h2 class="font-bold text-white text-lg flex items-center gap-2"><i
+                            class="fas fa-cog text-amber-400"></i> Pengaturan & Riwayat</h2>
+                    <button onclick="toggleModal(false)" class="text-slate-400 hover:text-white transition-colors"><i
+                            class="fas fa-times"></i></button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Filter
+                            Tanggal</label>
+                        <input type="date" id="input-tanggal" onchange="filterRiwayat()"
+                            class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-xl text-sm focus:border-amber-500 outline-none transition-all">
+                    </div>
+                    <div class="grid grid-cols-1 gap-2" id="admin-actions">
+                        <button onclick="cetakLaporanPDF()"
+                            class="bg-blue-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-blue-700 transition">
+                            <i class="fas fa-file-pdf mr-2"></i> CETAK PDF
                         </button>
+                        <button onclick="downloadCSV()"
+                            class="bg-emerald-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-emerald-700 transition">
+                            <i class="fas fa-file-csv mr-2"></i> EXPORT CSV (ARSIP)
+                        </button>
+                        <button onclick="hapusRiwayatManual()"
+                            class="bg-red-500/10 border border-red-500/20 text-red-400 py-3 rounded-xl text-xs font-bold hover:bg-red-500/20 transition"><i
+                                class="fas fa-trash mr-2"></i> HAPUS RIWAYAT > 30 HARI</button>
                     </div>
                 </div>
-            `;
-            document.getElementById('container-antrean').prepend(div);
-        }
+                <div id="container-riwayat"
+                    class="mt-6 space-y-3 text-xs max-h-[300px] overflow-y-auto pr-2 custom-scrollbar"></div>
+            </div>
+        </div>
 
-        function showBukti(url) {
-            const modal = document.getElementById('modal-bukti');
-            const img = document.getElementById('img-bukti');
-            img.src = url;
-            modal.classList.remove('hidden');
-        }
+        <main class="w-full p-6 max-w-7xl mx-auto relative z-10">
+            <div class="flex items-center gap-3 mb-6">
+                <h2 class="text-lg font-bold">Antrean Aktif</h2>
+                <span class="text-[10px] text-slate-500 font-medium italic border-l border-slate-700 pl-3">
+                    Created by CyberPapsel
+                </span>
+            </div>
+            <div id="container-antrean" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div id="pesan-kosong" class="col-span-full text-center py-20 text-slate-500">
+                    Belum ada pesanan masuk.
+                </div>
+            </div>
+        </main>
 
-        function hideBukti() {
-            document.getElementById('modal-bukti').classList.add('hidden');
-            document.getElementById('img-bukti').src = "";
-        }
+        <audio id="notif-sound" src="https://kopral-coffee-central.onrender.com/notification.mp3"
+            preload="auto"></audio>
+        <audio id="warning-sound" src="https://kopral-coffee-central.onrender.com/warning.mp3" preload="auto"></audio>
 
-        function konfirmasiBayar(id) {
-            Swal.fire({
-                title: 'Konfirmasi Pembayaran',
-                text: "Pastikan pelanggan sudah membayar tunai.",
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonColor: '#16a34a',
-                confirmButtonText: 'Sudah Bayar'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const containerTombol = document.getElementById(`btn-selesai-${id}`).parentElement;
-                    const btnBayar = document.getElementById(`btn-bayar-${id}`);
-                    document.getElementById(`btn-selesai-${id}`).remove();
-                    const btnBaru = document.createElement('button');
-                    btnBaru.id = `btn-selesai-${id}`;
-                    btnBaru.className = "bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-3 rounded-2xl transition col-span-2";
-                    btnBaru.innerHTML = '<i class="fas fa-check"></i> SELESAI';
-                    btnBaru.onclick = function () { selesaiPesanan(id); };
-                    containerTombol.appendChild(btnBaru);
-                    if (btnBayar) btnBayar.style.display = 'none';
-                    Swal.fire('Berhasil!', 'Pembayaran dikonfirmasi.', 'success');
-                }
-            });
-        }
+        <script>
+            // Logika tetap sama seperti yang Anda buat sebelumnya
+            let socket;
+            let activeOrders = JSON.parse(localStorage.getItem('kopral_active_orders') || '{}');
+            let warningShown = false;
 
-        function prosesPesanan(id) {
-            const btnProses = document.getElementById(`btn-proses-${id}`);
-            const btnSelesai = document.getElementById(`btn-selesai-${id}`);
-            document.getElementById(id).classList.add('border-blue-500');
-            btnProses.innerHTML = '<i class="fas fa-spinner fa-spin"></i> DIPROSES';
-            btnProses.classList.replace('bg-amber-500', 'bg-blue-600');
-            btnSelesai.disabled = false;
-            btnSelesai.classList.replace('bg-slate-800', 'bg-green-600');
-            btnSelesai.classList.replace('text-slate-600', 'text-white');
-            btnSelesai.classList.remove('cursor-not-allowed', 'border', 'border-slate-700');
-        }
-
-        function selesaiPesanan(id) {
-            const card = document.getElementById(id);
-            if (card) {
-                const cardClone = card.cloneNode(true);
-                cardClone.querySelector('.grid')?.remove();
-                cardClone.appendChild(Object.assign(document.createElement('div'), {
-                    className: "mt-4 pt-4 border-t border-slate-700/50 text-center",
-                    innerHTML: `<span class="inline-block bg-green-900/30 text-green-500 text-[10px] font-bold px-4 py-2 rounded-full border border-green-500/20"><i class="fas fa-check-circle mr-2"></i> PESANAN SELESAI</span>`
-                }));
-                const dataPesanan = {
-                    html: cardClone.innerHTML,
-                    items: activeOrders[id].items,
-                    pembayaran: activeOrders[id].pembayaran,
-                    timestamp: new Date().getTime(),
-                    tanggal: new Date().toISOString().split('T')[0]
-                };
-                let riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
-                riwayat.unshift(dataPesanan);
-                localStorage.setItem('kopral_riwayat_data', JSON.stringify(riwayat));
-                delete activeOrders[id];
-                localStorage.setItem('kopral_active_orders', JSON.stringify(activeOrders));
-                card.remove();
-                if (Object.keys(activeOrders).length === 0) document.getElementById('pesan-kosong').classList.remove('hidden');
-            }
-        }
-
-        function cetakLaporanPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-            const riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
-            if (riwayat.length === 0) { Swal.fire('Oops', 'Data kosong', 'info'); return; }
-
-            const getKategori = (name) => {
-                const n = name.toLowerCase();
-                if (n.includes('kopi') || n.includes('coffee') || n.includes('espresso') || n.includes('latte') || n.includes('americano') || n.includes('cappuccino')) return 'Coffee';
-                const snackKeywords = ['snack', 'food', 'makan', 'gorengan', 'camilan', 'mie', 'nasi', 'fries', 'croissant', 'dimsum', 'toast', 'burger', 'sandwich', 'pastry', 'roti'];
-                if (snackKeywords.some(keyword => n.includes(keyword))) return 'Snack & Food';
-                return 'Non-Coffee';
+            window.onload = () => {
+                renderActiveOrders();
+                setInterval(checkClosingTime, 30000);
             };
 
-            let dataTerstruktur = { 'Coffee': {}, 'Snack & Food': {}, 'Non-Coffee': {} };
-            let totalCash = 0;
-            let totalTransfer = 0;
+            // LOGIKA LOGIN DENGAN AKSES TERPISAH
+            function prosesLogin() {
+                const user = document.getElementById('input-username').value;
+                const pass = document.getElementById('input-password').value;
+                const errUser = document.getElementById('error-user');
+                const errPass = document.getElementById('error-pass');
 
-            riwayat.forEach(r => {
-                const subtotalOrder = r.items.reduce((acc, i) => acc + (parseFloat(i.price) * parseInt(i.quantity)), 0);
-                if (r.pembayaran === 'Cash') totalCash += subtotalOrder;
-                else totalTransfer += subtotalOrder;
-                r.items.forEach(i => {
-                    const kat = getKategori(i.name);
-                    if (!dataTerstruktur[kat]) dataTerstruktur[kat] = {};
-                    if (!dataTerstruktur[kat][i.name]) dataTerstruktur[kat][i.name] = { qty: 0, price: i.price };
-                    dataTerstruktur[kat][i.name].qty += parseInt(i.quantity);
+                // Reset error
+                errUser.classList.add('hidden');
+                errPass.classList.add('hidden');
+
+                // Definisi Kredensial
+                const kredensial = {
+                    admin: { pass: "admin123", role: "admin" },
+                    dapur: { pass: "dapur123", role: "dapur" }
+                };
+
+                if (kredensial[user] && kredensial[user].pass === pass) {
+                    // Login Berhasil
+                    const container = document.getElementById('login-form-container');
+                    container.style.opacity = '0';
+
+                    // Simpan role ke session agar bisa dipakai untuk membatasi fitur
+                    sessionStorage.setItem('kopral_role', kredensial[user].role);
+
+                    setTimeout(() => {
+                        container.style.display = 'none';
+                        startApp();
+
+                        // Opsional: Sembunyikan fitur tertentu jika yang login adalah Dapur
+                        if (kredensial[user].role === 'dapur') {
+                            console.log("Mode Dapur Aktif: Fitur Admin disembunyikan");
+                            // Contoh: document.querySelector('.tombol-admin').style.display = 'none';
+                        }
+                    }, 500);
+                } else {
+                    // Login Gagal
+                    if (!kredensial[user]) {
+                        errUser.innerText = "* USERNAME TIDAK DITEMUKAN";
+                        errUser.classList.remove('hidden', 'opacity-0');
+                    } else {
+                        errPass.innerText = "* PASSWORD SALAH";
+                        errPass.classList.remove('hidden', 'opacity-0');
+                    }
+                }
+            }
+
+            function updateStatus(isConnected) {
+                const dot = document.getElementById('dot-status');
+                const text = document.getElementById('text-status');
+                if (isConnected) {
+                    dot.className = "w-2 h-2 rounded-full bg-green-500 animate-pulse";
+                    text.innerText = "ONLINE";
+                } else {
+                    dot.className = "w-2 h-2 rounded-full bg-red-500";
+                    text.innerText = "OFFLINE - RECONNECTING...";
+                }
+            }
+
+            function checkClosingTime() {
+                const now = new Date();
+                const hours = now.getHours();
+                const minutes = now.getMinutes();
+                if (hours === 23 && minutes >= 55) {
+                    showClosingWarning();
+                } else {
+                    warningShown = false;
+                }
+            }
+
+            function showClosingWarning() {
+                if (warningShown) return;
+                const audio = document.getElementById('warning-sound');
+                audio.play().catch(error => console.log("Audio play failed:", error));
+                Swal.fire({
+                    title: '⚠️ PERINGATAN TUTUP HARI',
+                    html: 'Sudah mendekati jam 00:00! Segera selesaikan atau hapus pesanan yang menggantung agar data penjualan hari ini akurat.',
+                    icon: 'warning',
+                    confirmButtonColor: '#d97706',
+                    confirmButtonText: 'Siap, Mengerti!',
+                    allowOutsideClick: false
                 });
-            });
+                warningShown = true;
+            }
 
-            doc.setFontSize(16);
-            doc.text("LAPORAN PENJUALAN KOPRAL", 14, 15);
-            doc.setFontSize(10);
-            doc.text(`Total Omzet CASH: Rp ${totalCash.toLocaleString()}`, 14, 25);
-            doc.text(`Total Omzet TRANSFER: Rp ${totalTransfer.toLocaleString()}`, 14, 30);
-            doc.text(`TOTAL KESELURUHAN: Rp ${(totalCash + totalTransfer).toLocaleString()}`, 14, 35);
+            function renderActiveOrders() {
+                const container = document.getElementById('container-antrean');
+                document.querySelectorAll('.group').forEach(el => el.remove());
+                const orders = Object.values(activeOrders);
+                if (orders.length > 0) {
+                    document.getElementById('pesan-kosong').classList.add('hidden');
+                    orders.sort((a, b) => b.timestamp - a.timestamp).forEach(pesanan => { displayOrderUI(pesanan); });
+                } else {
+                    document.getElementById('pesan-kosong').classList.remove('hidden');
+                }
+            }
 
-            let yPos = 45;
-            for (const [kategori, items] of Object.entries(dataTerstruktur)) {
-                if (Object.keys(items).length === 0) continue;
+            async function startApp() {
+                try {
+                    const audio = document.getElementById('notif-sound');
+                    await audio.play().catch(() => { }); audio.pause();
+                    socket = io("https://kopral-coffee-central.onrender.com", {
+                        reconnection: true,
+                        reconnectionAttempts: Infinity,
+                        reconnectionDelay: 1000
+                    });
+                    socket.on('connect', () => updateStatus(true));
+                    socket.on('disconnect', () => updateStatus(false));
+                    socket.on('connect_error', () => updateStatus(false));
+                    socket.on('notifikasi-pesanan-baru', (pesanan) => {
+                        pesanan.timestamp = pesanan.timestamp || new Date().getTime();
+                        activeOrders[pesanan.id_pesanan] = pesanan;
+                        localStorage.setItem('kopral_active_orders', JSON.stringify(activeOrders));
+                        renderActiveOrders();
+                        document.getElementById('notif-sound').play().catch(() => { });
+                    });
+                    document.getElementById('start-overlay').style.display = 'none';
+                } catch (err) {
+                    Swal.fire('Error', 'Gagal terhubung ke server', 'error');
+                }
+            }
+
+            function displayOrderUI(pesanan) {
+                const role = sessionStorage.getItem('kopral_role');
+                const isAdmin = role === 'admin';
+                const isDapur = role === 'dapur';
+
+                const waktuMasuk = pesanan.timestamp ? new Date(pesanan.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                const totalHarga = pesanan.items.reduce((acc, i) => acc + (parseFloat(i.price) * parseInt(i.quantity)), 0);
+                const isCash = pesanan.pembayaran === 'Cash';
+                const orderTypeLabel = pesanan.metode === 'Dine-In' ? '🍽️ Makan di Tempat' : '🛍️ Bawa Pulang';
+
+                // LOGIKA ATRIBUT TOMBOL SELESAI
+                let isSelesaiDisabled = false;
+                if (isDapur || (isCash && !pesanan.sudah_dibayar)) {
+                    isSelesaiDisabled = true;
+                }
+
+                const selesaiAttrs = isSelesaiDisabled
+                    ? 'disabled class="bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed text-xs font-bold py-3 rounded-2xl transition w-full"'
+                    : 'onclick="selesaiPesanan(\'' + pesanan.id_pesanan + '\')" class="bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-3 rounded-2xl transition w-full"';
+
+                const div = document.createElement('div');
+                div.id = pesanan.id_pesanan;
+                div.className = "group bg-slate-800 border border-slate-700 p-5 rounded-3xl shadow-2xl";
+
+                const tombolProses = !isAdmin ?
+                    `<button id="btn-proses-${pesanan.id_pesanan}" onclick="prosesPesanan('${pesanan.id_pesanan}')" class="bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold py-3 rounded-2xl transition w-full"><i class="fas fa-clock"></i> PROSES</button>`
+                    : '';
+
+                const tombolBukti = (pesanan.bukti_transfer && !isDapur) ?
+                    `<button onclick="showBukti('${pesanan.bukti_transfer}')" class="w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-xl transition block text-center"><i class="fas fa-image mr-1"></i> LIHAT BUKTI TRANSFER</button>`
+                    : '';
+
+                const tombolBayar = (isCash && !isDapur) ?
+                    `<button id="btn-bayar-${pesanan.id_pesanan}" onclick="konfirmasiBayar('${pesanan.id_pesanan}')" class="bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-3 rounded-2xl transition w-full mb-3"><i class="fas fa-hand-holding-usd"></i> KONFIRMASI BAYAR</button>`
+                    : '';
+
+                // Variabel Nama Rekening Transfer
+                const namaRekeningUI = (pesanan.pembayaran === 'Transfer' && pesanan.nama_pengirim && !isDapur) ?
+                    `<div class="mt-2 bg-slate-900 border border-blue-500/30 p-2 rounded-lg text-[10px] text-blue-300">
+        <span class="font-bold uppercase">Nama Rekening Transfer:</span> ${pesanan.nama_pengirim}
+    </div>` : '';
+
+                div.innerHTML = `
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <h3 class="font-bold text-white text-lg">${pesanan.nama}</h3>
+                <div class="flex items-center gap-2 mt-1">
+                    <span class="bg-amber-500/10 text-amber-500 text-[10px] font-bold px-3 py-1 rounded-full border border-amber-500/20">MEJA ${pesanan.meja}</span>
+                    <span class="badge-order-type">${orderTypeLabel}</span>
+                </div>
+                <div class="mt-2 text-[10px] text-slate-400 font-bold"><i class="fas fa-clock mr-1"></i> Jam Masuk: ${waktuMasuk}</div>
+                <div class="mt-2 text-[10px] font-bold ${isCash ? 'text-red-400' : 'text-blue-400'} uppercase"><i class="fas ${isCash ? 'fa-money-bill' : 'fa-credit-card'} mr-1"></i> ${pesanan.pembayaran || 'Transfer'}</div>
+                ${namaRekeningUI}
+            </div>
+        </div>
+        <div class="bg-slate-900/50 rounded-2xl p-4 space-y-2 mb-4">
+            ${pesanan.items.map(i => `<div class="flex flex-col mb-2"><div class="flex justify-between text-sm"><span class="text-slate-300">${i.quantity}x ${i.name}</span><span class="font-medium text-slate-100">Rp ${Number(i.price).toLocaleString()}</span></div></div>`).join('')}
+            <div class="border-t border-slate-700/50 mt-2 pt-2 flex justify-between font-black text-white"><span>TOTAL</span><span>Rp ${totalHarga.toLocaleString()}</span></div>
+        </div>
+        ${tombolBukti}
+        <div class="grid grid-cols-1 gap-3">
+            ${tombolBayar}
+            <div class="grid ${!isAdmin ? 'grid-cols-2' : 'grid-cols-1'} gap-3">
+                ${tombolProses}
+                <button id="btn-selesai-${pesanan.id_pesanan}" ${selesaiAttrs}>
+                    <i class="fas fa-check"></i> SELESAI
+                </button>
+            </div>
+        </div>
+    `;
+                document.getElementById('container-antrean').prepend(div);
+            }
+
+            function showBukti(url) {
+                const modal = document.getElementById('modal-bukti');
+                const img = document.getElementById('img-bukti');
+                img.src = url;
+                modal.classList.remove('hidden');
+            }
+
+            function hideBukti() {
+                document.getElementById('modal-bukti').classList.add('hidden');
+                document.getElementById('img-bukti').src = "";
+            }
+
+            function konfirmasiBayar(id) {
+                Swal.fire({
+                    title: 'Konfirmasi Pembayaran',
+                    text: "Pastikan pelanggan sudah membayar tunai.",
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#16a34a',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Sudah Bayar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const btnSelesai = document.getElementById(`btn-selesai-${id}`);
+                        const btnBayar = document.getElementById(`btn-bayar-${id}`);
+
+                        if (btnSelesai) {
+                            // 1. Aktifkan tombol (hapus disabled)
+                            btnSelesai.disabled = false;
+
+                            // 2. Perbarui tampilan tombol agar menjadi aktif
+                            btnSelesai.className = "bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-3 rounded-2xl transition w-full";
+
+                            // 3. Pastikan fungsi klik selesai terpasang
+                            btnSelesai.onclick = function () { selesaiPesanan(id); };
+                        }
+
+                        // 4. Sembunyikan tombol Bayar
+                        if (btnBayar) {
+                            btnBayar.style.display = 'none';
+                        }
+
+                        // 5. Update data di localStorage agar status tersimpan (opsional tapi disarankan)
+                        if (activeOrders[id]) {
+                            activeOrders[id].sudah_dibayar = true;
+                            localStorage.setItem('kopral_active_orders', JSON.stringify(activeOrders));
+                        }
+
+                        Swal.fire('Berhasil!', 'Pembayaran dikonfirmasi.', 'success');
+                    }
+                });
+            }
+
+            function prosesPesanan(id) {
+                const btnProses = document.getElementById(`btn-proses-${id}`);
+                const btnSelesai = document.getElementById(`btn-selesai-${id}`);
+
+                // Ubah tampilan tombol proses
+                btnProses.innerHTML = '<i class="fas fa-check-circle"></i> DIPROSES';
+                btnProses.classList.replace('bg-amber-500', 'bg-blue-600');
+                btnProses.disabled = true;
+
+                // Aktifkan tombol selesai
+                btnSelesai.disabled = false;
+                btnSelesai.className = "bg-green-600 hover:bg-green-700 text-white text-xs font-bold py-3 rounded-2xl transition";
+                btnSelesai.onclick = function () { selesaiPesanan(id); };
+            }
+
+            function selesaiPesanan(id) {
+                const card = document.getElementById(id);
+                if (card) {
+                    const cardClone = card.cloneNode(true);
+                    cardClone.querySelector('.grid')?.remove();
+                    cardClone.appendChild(Object.assign(document.createElement('div'), {
+                        className: "mt-4 pt-4 border-t border-slate-700/50 text-center",
+                        innerHTML: `<span class="inline-block bg-green-900/30 text-green-500 text-[10px] font-bold px-4 py-2 rounded-full border border-green-500/20"><i class="fas fa-check-circle mr-2"></i> PESANAN SELESAI</span>`
+                    }));
+                    const dataPesanan = {
+                        html: cardClone.innerHTML,
+                        items: activeOrders[id].items,
+                        pembayaran: activeOrders[id].pembayaran,
+                        timestamp: new Date().getTime(),
+                        tanggal: new Date().toISOString().split('T')[0]
+                    };
+                    let riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
+                    riwayat.unshift(dataPesanan);
+                    localStorage.setItem('kopral_riwayat_data', JSON.stringify(riwayat));
+                    delete activeOrders[id];
+                    localStorage.setItem('kopral_active_orders', JSON.stringify(activeOrders));
+                    card.remove();
+                    if (Object.keys(activeOrders).length === 0) document.getElementById('pesan-kosong').classList.remove('hidden');
+                }
+            }
+
+            function cetakLaporanPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
+                if (riwayat.length === 0) { Swal.fire('Oops', 'Data kosong', 'info'); return; }
+
+                const getKategori = (name) => {
+                    const n = name.toLowerCase();
+
+                    // 1. Manual Override (Prioritas tinggi untuk item yang sering salah kategori)
+                    if (n.includes('matcha') || n.includes('coklat') || n.includes('chocolate')) return 'Non-Coffee';
+
+                    // 2. KATEGORI COFFEE
+                    const coffeeKeywords = [
+                        'kopi', 'coffee', 'espresso', 'latte', 'americano', 'cappuccino',
+                        'macchiato', 'mocha', 'affogato', 'kopral'
+                    ];
+                    if (coffeeKeywords.some(keyword => n.includes(keyword))) return 'Coffee';
+
+                    // 3. KATEGORI SNACK & FOOD
+                    const snackKeywords = [
+                        'snack', 'food', 'makan', 'gorengan', 'camilan', 'mie', 'nasi',
+                        'fries', 'kentang', 'croissant', 'dimsum', 'toast', 'burger',
+                        'sandwich', 'pastry', 'roti', 'pisang', 'siomay', 'bakso', 'ayam'
+                    ];
+                    if (snackKeywords.some(keyword => n.includes(keyword))) return 'Snack & Food';
+
+                    // 4. KATEGORI NON-COFFEE
+                    const nonCoffeeKeywords = [
+                        'tea', 'teh', 'squash', 'susu', 'milk', 'mocktail', 'jus', 'juice',
+                        'ice', 'lemon', 'yakult'
+                    ];
+                    if (nonCoffeeKeywords.some(keyword => n.includes(keyword))) return 'Non-Coffee';
+
+                    // Fallback: Jika tidak ditemukan keyword, masuk ke Non-Coffee
+                    return 'Non-Coffee';
+                };
+
+                // Inisialisasi struktur data
+                let dataTerstruktur = {
+                    'Coffee': {},
+                    'Snack & Food': {},
+                    'Non-Coffee': {}
+                };
+                let totalCash = 0, totalTransfer = 0;
+
+                riwayat.forEach(r => {
+                    const subtotalOrder = r.items.reduce((acc, i) => acc + (parseFloat(i.price) * parseInt(i.quantity)), 0);
+                    if (r.pembayaran === 'Cash') totalCash += subtotalOrder;
+                    else totalTransfer += subtotalOrder;
+
+                    r.items.forEach(i => {
+                        const kat = getKategori(i.name);
+                        if (!dataTerstruktur[kat]) dataTerstruktur[kat] = {};
+                        if (!dataTerstruktur[kat][i.name]) dataTerstruktur[kat][i.name] = { qty: 0, price: i.price };
+                        dataTerstruktur[kat][i.name].qty += parseInt(i.quantity);
+                    });
+                });
+
+                // 1. Judul & Header Info
+                doc.setFontSize(16);
+                doc.text("LAPORAN PENJUALAN KOPRAL", 14, 15);
+                doc.setFontSize(10);
+                doc.text(`Total Omzet CASH: Rp ${totalCash.toLocaleString()}`, 14, 25);
+                doc.text(`Total Omzet TRANSFER: Rp ${totalTransfer.toLocaleString()}`, 14, 30);
+                doc.text(`TOTAL KESELURUHAN: Rp ${(totalCash + totalTransfer).toLocaleString()}`, 14, 35);
+
+                // 2. Tabel per Kategori
+                let yPos = 45;
+                for (const [kategori, items] of Object.entries(dataTerstruktur)) {
+                    if (Object.keys(items).length === 0) continue;
+
+                    doc.setFontSize(12);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`Kategori: ${kategori}`, 14, yPos);
+                    yPos += 5;
+
+                    let body = Object.keys(items).map(name => [
+                        name,
+                        items[name].qty,
+                        `Rp ${Number(items[name].price).toLocaleString()}`,
+                        `Rp ${(items[name].qty * items[name].price).toLocaleString()}`
+                    ]);
+
+                    doc.autoTable({
+                        startY: yPos,
+                        head: [['Nama Item', 'Qty', 'Harga', 'Subtotal']],
+                        body: body,
+                        theme: 'striped',
+                        headStyles: { fillColor: [51, 65, 85] }
+                    });
+
+                    yPos = doc.lastAutoTable.finalY + 10;
+                }
+
+                // 3. Bagian "Terlaris" (Posisi paling bawah setelah tabel)
                 doc.setFontSize(12);
                 doc.setFont("helvetica", "bold");
-                doc.text(`Kategori: ${kategori}`, 14, yPos);
-                yPos += 5;
-                let body = Object.keys(items).map(name => [name, items[name].qty, `Rp ${Number(items[name].price).toLocaleString()}`, `Rp ${(items[name].qty * items[name].price).toLocaleString()}`]);
-                doc.autoTable({ startY: yPos, head: [['Nama Item', 'Qty', 'Harga', 'Subtotal']], body: body, theme: 'striped', headStyles: { fillColor: [51, 65, 85] } });
-                yPos = doc.lastAutoTable.finalY + 10;
+                doc.text("Terlaris:", 14, yPos);
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "normal");
+
+                yPos += 7;
+                Object.keys(dataTerstruktur).forEach(kat => {
+                    const items = dataTerstruktur[kat];
+                    let terlaris = { name: '-', qty: 0 };
+                    Object.keys(items).forEach(name => {
+                        if (items[name].qty > terlaris.qty) terlaris = { name, qty: items[name].qty };
+                    });
+                    doc.text(`Kategori ${kat} : ${terlaris.name} (★)`, 14, yPos);
+                    yPos += 5;
+                });
+
+                doc.save(`Laporan_Penjualan_${new Date().toISOString().split('T')[0]}.pdf`);
             }
-            doc.save(`Laporan_Penjualan_${new Date().toISOString().split('T')[0]}.pdf`);
-        }
 
-        function downloadCSV() {
-            const riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
-            if (riwayat.length === 0) { Swal.fire('Oops', 'Data kosong', 'info'); return; }
-            let csv = "Tanggal,Items,Total\n";
-            riwayat.forEach(r => {
-                const items = r.items.map(i => `${i.quantity}x ${i.name}`).join(';');
-                csv += `${r.tanggal},"${items}",${r.items.reduce((acc, i) => acc + (i.price * i.quantity), 0)}\n`;
-            });
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Riwayat_Penjualan_${new Date().toISOString().split('T')[0]}.csv`;
-            a.click();
-        }
+            function downloadCSV() {
+                const riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
+                if (riwayat.length === 0) { Swal.fire('Oops', 'Data kosong', 'info'); return; }
+                let csv = "Tanggal,Items,Total\n";
+                riwayat.forEach(r => {
+                    const items = r.items.map(i => `${i.quantity}x ${i.name}`).join(';');
+                    csv += `${r.tanggal},"${items}",${r.items.reduce((acc, i) => acc + (i.price * i.quantity), 0)}\n`;
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Riwayat_${new Date().toISOString().split('T')[0]}.csv`;
+                a.click();
+            }
 
-        function filterRiwayat() {
-            const tanggal = document.getElementById('input-tanggal').value;
-            const container = document.getElementById('container-riwayat');
-            const riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
-            container.innerHTML = '';
-            const filtered = tanggal ? riwayat.filter(i => i.tanggal === tanggal) : riwayat;
-            const totalOmzet = filtered.reduce((acc, r) => acc + r.items.reduce((sub, i) => sub + (i.price * i.quantity), 0), 0);
-            container.innerHTML = `<div class="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 mb-4 text-center"><p class="text-amber-500 text-[10px] font-bold uppercase">Total Omzet</p><h3 class="text-white font-black text-xl">Rp ${totalOmzet.toLocaleString()}</h3></div>`;
-            filtered.forEach(item => {
-                const div = document.createElement('div');
-                div.className = "bg-slate-900 p-4 rounded-xl border border-slate-700 mb-3";
-                div.innerHTML = item.html;
-                container.appendChild(div);
-            });
-        }
+            function filterRiwayat() {
+                const role = sessionStorage.getItem('kopral_role');
+                const tanggal = document.getElementById('input-tanggal').value;
+                const container = document.getElementById('container-riwayat');
+                const riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
 
-        function hapusRiwayatManual() {
-            let riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
-            const batas = new Date(); batas.setDate(batas.getDate() - 30);
-            const dataBaru = riwayat.filter(i => new Date(i.timestamp) >= batas);
-            if (dataBaru.length === riwayat.length) { Swal.fire('Info', 'Tidak ada riwayat lama (>30 hari) untuk dihapus.', 'info'); return; }
-            Swal.fire({ title: 'Hapus Riwayat Lama?', text: "Hanya data > 30 hari yang akan dihapus.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Ya, Hapus!' }).then((result) => {
-                if (result.isConfirmed) { localStorage.setItem('kopral_riwayat_data', JSON.stringify(dataBaru)); filterRiwayat(); Swal.fire('Dihapus!', 'Riwayat lama berhasil dibersihkan.', 'success'); }
-            });
-        }
+                container.innerHTML = '';
+                const filtered = tanggal ? riwayat.filter(i => i.tanggal === tanggal) : riwayat;
 
-        function toggleModal(show) {
-            document.getElementById('modal').classList.toggle('hidden', !show);
-            if (show) { document.getElementById('input-tanggal').value = new Date().toISOString().split('T')[0]; filterRiwayat(); }
-        }
-    </script>
+                // LOGIKA: Hanya tampilkan Total Omzet jika BUKAN dapur (yaitu admin)
+                if (role !== 'dapur') {
+                    const totalOmzet = filtered.reduce((acc, r) => acc + r.items.reduce((sub, i) => sub + (i.price * i.quantity), 0), 0);
+                    container.innerHTML = `<div class="bg-amber-500/10 p-4 rounded-xl border border-amber-500/20 mb-4 text-center"><p class="text-amber-500 text-[10px] font-bold uppercase">Total Omzet</p><h3 class="text-white font-black text-xl">Rp ${totalOmzet.toLocaleString()}</h3></div>`;
+                }
+
+                filtered.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = "bg-slate-900 p-4 rounded-xl border border-slate-700 mb-3";
+
+                    let htmlContent = item.html || ''; // Menambahkan fallback ke string kosong jika null/undefined
+
+                    if (role === 'dapur') {
+                        // Menambahkan pengecekan apakah htmlContent benar-benar ada sebelum di-replace
+                        if (typeof htmlContent === 'string') {
+                            htmlContent = htmlContent.replace(/<button[^>]*>.*?LIHAT BUKTI TRANSFER.*?<\/button>/gi, '');
+                        }
+                    }
+
+                    div.innerHTML = htmlContent;
+                    container.appendChild(div);
+                });
+            }
+
+            function hapusRiwayatManual() {
+                let riwayat = JSON.parse(localStorage.getItem('kopral_riwayat_data') || '[]');
+                const batas = new Date(); batas.setDate(batas.getDate() - 30);
+                const dataBaru = riwayat.filter(i => new Date(i.timestamp) >= batas);
+                if (dataBaru.length === riwayat.length) { Swal.fire('Info', 'Tidak ada riwayat lama (>30 hari) untuk dihapus.', 'info'); return; }
+                Swal.fire({ title: 'Hapus Riwayat Lama?', text: "Hanya data > 30 hari yang akan dihapus.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Ya, Hapus!' }).then((result) => {
+                    if (result.isConfirmed) { localStorage.setItem('kopral_riwayat_data', JSON.stringify(dataBaru)); filterRiwayat(); Swal.fire('Dihapus!', 'Riwayat lama berhasil dibersihkan.', 'success'); }
+                });
+            }
+
+            function toggleModal(show) {
+                const modal = document.getElementById('modal');
+                const adminActions = document.getElementById('admin-actions');
+                const role = sessionStorage.getItem('kopral_role');
+
+                if (show) {
+                    modal.classList.remove('hidden');
+                    // Jika Dapur, sembunyikan tombol admin-actions
+                    if (role === 'dapur') {
+                        adminActions.style.display = 'none';
+                    } else {
+                        adminActions.style.display = 'grid'; // Pastikan muncul untuk Admin
+                    }
+                    document.getElementById('input-tanggal').value = new Date().toISOString().split('T')[0];
+                    filterRiwayat();
+                } else {
+                    modal.classList.add('hidden');
+                }
+            }
+        </script>
 </body>
 
 </html>
