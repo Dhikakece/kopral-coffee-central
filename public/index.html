@@ -394,9 +394,19 @@
             </div>
         </div>
         <div class="bg-slate-900/50 rounded-2xl p-4 space-y-2 mb-4">
-            ${pesanan.items.map(i => `<div class="flex flex-col mb-2"><div class="flex justify-between text-sm"><span class="text-slate-300">${i.quantity}x ${i.name}</span><span class="font-medium text-slate-100">Rp ${Number(i.price).toLocaleString()}</span></div></div>`).join('')}
-            <div class="border-t border-slate-700/50 mt-2 pt-2 flex justify-between font-black text-white"><span>TOTAL</span><span>Rp ${totalHarga.toLocaleString()}</span></div>
+        ${pesanan.items.map(i => `
+            <div class="flex flex-col mb-2">
+                <div class="flex justify-between text-sm">
+                    <span class="text-slate-300">${i.quantity}x ${i.name}</span>
+                    <span class="font-medium text-slate-100">Rp ${Number(i.price).toLocaleString()}</span>
+                </div>
+                ${i.note ? `<div class="text-[10px] text-amber-400 italic mt-0.5">• Catatan: ${i.note}</div>` : ''}
+            </div>
+        `).join('')}
+        <div class="border-t border-slate-700/50 mt-2 pt-2 flex justify-between font-black text-white">
+            <span>TOTAL</span><span>Rp ${totalHarga.toLocaleString()}</span>
         </div>
+    </div>
         ${tombolBukti}
         <div class="grid grid-cols-1 gap-3">
             ${tombolBayar}
