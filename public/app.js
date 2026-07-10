@@ -620,6 +620,7 @@ async function selesaiPesanan(id) {
           innerHTML:
             '<i class="fas fa-image mr-1"></i> TAMPILKAN BUKTI TRANSFER',
         });
+        btnBukti.setAttribute("data-bukti", buktiUrl);
         btnBukti.addEventListener("click", () => showBukti(buktiUrl));
         cardClone.appendChild(btnBukti);
       }
@@ -1070,6 +1071,26 @@ function filterRiwayat() {
     }
 
     div.innerHTML = htmlContent;
+    // Jika ada tombol bukti dalam HTML (riwayat admin), pasang listener agar tombol membuka modal
+    try {
+      if (role === "admin") {
+        const buttons = div.querySelectorAll("button");
+        buttons.forEach((b) => {
+          const txt = (b.textContent || "").toLowerCase();
+          if (txt.includes("bukti transfer") || b.dataset.bukti) {
+            const url =
+              b.getAttribute("data-bukti") ||
+              item.bukti_transfer ||
+              item.buktiTransfer;
+            if (url) {
+              b.addEventListener("click", () => showBukti(url));
+            }
+          }
+        });
+      }
+    } catch (e) {
+      console.error("[Riwayat] Error attaching bukti listeners:", e);
+    }
     container.appendChild(div);
   });
 }
