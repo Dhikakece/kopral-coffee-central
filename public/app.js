@@ -552,13 +552,65 @@ function selesaiPesanan(id) {
       timestamp: new Date().getTime(),
       tanggal: new Date().toISOString().split("T")[0],
     };
-    // Stok sudah dikurangi oleh server saat pesanan masuk. Jangan kurangi lagi di sini.
-    // Hanya update UI lokal jika diperlukan.
-    if (typeof socket !== "undefined" && socket && socket.connected) {
+    // Keputusan apakah tombol SELESAI harus mengupdate stok tergantung role dan metode pembayaran
+    // Aturan:
+    // - jika login sebagai 'dapur' => update stok saat pembayaran 'Cash' saja
+    // - jika login sebagai 'admin' => update stok saat pembayaran 'Transfer' saja
+    const role = sessionStorage.getItem("kopral_role") || "admin";
+    const pembayaran = pesanan.pembayaran || "";
+    function shouldEmitUpdate(role, pembayaran) {
+      if (role === "dapur") return pembayaran === "Cash";
+      if (role === "admin") return pembayaran === "Transfer";
+      return false;
+    }
+
+    const doEmit = shouldEmitUpdate(role, pembayaran);
+
+    if (doEmit) {
+      // Lakukan pengurangan stok lokal lalu beri tahu server dengan nilai stok absolut
+      items.forEach((item) => {
+        const stokItem = Object.values(stockData).find(
+          (stockEntry) =>
+            stockEntry.id === item.id || stockEntry.name === item.name,
+        );
+        if (!stokItem) return;
+
+        const before = Number(stokItem.stock) || 0;
+        const qty = Number(item.quantity) || 0;
+        const after = before - qty;
+        stokItem.stock = after < 0 ? 0 : after;
+        stokItem._lastLocalUpdate = new Date().getTime();
+
+        try {
+          if (typeof socket !== "undefined" && socket && socket.connected) {
+            socket.emit("update-stok-realtime", {
+              id: stokItem.id,
+              stock: stokItem.stock,
+              name: stokItem.name,
+            });
+            console.log("[Stock] Emitted update-stok-realtime to server", {
+              id: stokItem.id,
+              stock: stokItem.stock,
+            });
+          } else {
+            console.log("[Stock] Socket tidak terhubung, hanya update lokal:", {
+              id: stokItem.id,
+              stock: stokItem.stock,
+            });
+          }
+        } catch (e) {
+          console.error("[Stock] Error emitting stock update:", e);
+        }
+      });
+      updateItemDropdown();
+    } else {
       console.log(
-        "[Stock] Pesanan selesai, stok akan tetap sinkron dari server yang sudah mengurangi saat order masuk.",
+        "[Stock] Tidak mengupdate stok pada SELESAI karena kombinasi role/pembayaran:",
+        role,
+        pembayaran,
       );
     }
+
     localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stockData));
     updateItemDropdown();
 
