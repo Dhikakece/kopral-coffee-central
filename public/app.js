@@ -301,6 +301,30 @@ async function startApp() {
         const role = sessionStorage.getItem("kopral_role") || "admin";
         socket.emit("identify", { role });
         console.log("[Socket] Identified role to server:", role);
+
+        // Ambil riwayat dari server untuk role ini (agar bukti transfer hanya terlihat oleh admin)
+        fetch(
+          `${window.location.origin}/api/riwayat?role=${encodeURIComponent(role)}`,
+        )
+          .then((r) => r.json())
+          .then((j) => {
+            if (j && j.success && Array.isArray(j.riwayat)) {
+              localStorage.setItem(
+                "kopral_riwayat_data",
+                JSON.stringify(j.riwayat),
+              );
+              try {
+                filterRiwayat();
+              } catch (e) {}
+              console.log(
+                "[Riwayat] Synced riwayat dari server for role:",
+                role,
+              );
+            }
+          })
+          .catch((e) =>
+            console.error("[Riwayat] Gagal ambil riwayat dari server:", e),
+          );
       } catch (e) {
         console.error("[Socket] Gagal mengirim identitas role:", e);
       }
@@ -312,16 +336,19 @@ async function startApp() {
     });
     socket.on("notifikasi-pesanan-baru", (pesanan) => {
       pesanan.timestamp = pesanan.timestamp || new Date().getTime();
+      const isNew = !activeOrders[pesanan.id_pesanan];
       activeOrders[pesanan.id_pesanan] = pesanan;
       localStorage.setItem(
         "kopral_active_orders",
         JSON.stringify(activeOrders),
       );
       renderActiveOrders();
-      document
-        .getElementById("notif-sound")
-        .play()
-        .catch(() => {});
+      if (isNew) {
+        document
+          .getElementById("notif-sound")
+          .play()
+          .catch(() => {});
+      }
     });
     // Terima notifikasi bahwa pesanan telah selesai dan tambahkan ke riwayat (jika belum ada)
     socket.on("notifikasi-pesanan-selesai", (pesanan) => {
