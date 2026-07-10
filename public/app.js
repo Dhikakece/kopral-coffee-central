@@ -7,50 +7,180 @@ let warningShown = false;
 
 const STOCK_STORAGE_KEY = "kopral_stock_state";
 const defaultStockData = {
-  m01: { id: "m01", name: "Pure Matcha Latte", stock: 10 },
-  m02: { id: "m02", name: "Chocolate", stock: 10 },
-  m03: { id: "m03", name: "Espresso Roman", stock: 10 },
-  m04: { id: "m04", name: "French Fries", stock: 10 },
+  c01: { id: "c01", name: "Espresso Roman", stock: 0, category: "coffee" },
+  c02: { id: "c02", name: "Creamy Latte", stock: 0, category: "coffee" },
+  c03: { id: "c03", name: "Americano", stock: 0, category: "coffee" },
+  c04: { id: "c04", name: "Cappuccino", stock: 0, category: "coffee" },
+  c05: { id: "c05", name: "Caramel Macchiato", stock: 0, category: "coffee" },
+  c06: { id: "c06", name: "Manual Brew", stock: 0, category: "coffee" },
+  c07: { id: "c07", name: "Kopi Gula Aren", stock: 0, category: "coffee" },
+  n01: {
+    id: "n01",
+    name: "Pure Matcha Latte",
+    stock: 0,
+    category: "non-coffee",
+  },
+  n02: { id: "n02", name: "Chocolate", stock: 0, category: "non-coffee" },
+  n03: { id: "n03", name: "Milkshake", stock: 0, category: "non-coffee" },
+  n04: { id: "n04", name: "Mocktail", stock: 0, category: "non-coffee" },
+  n05: { id: "n05", name: "Lychee Tea", stock: 0, category: "non-coffee" },
+  n06: { id: "n06", name: "Lemon Tea", stock: 0, category: "non-coffee" },
+  n07: {
+    id: "n07",
+    name: "Signature Chocolate",
+    stock: 0,
+    category: "non-coffee",
+  },
+  s01: {
+    id: "s01",
+    name: "Butter Croissant",
+    stock: 0,
+    category: "snack & food",
+  },
+  s02: { id: "s02", name: "Mie Goreng", stock: 0, category: "snack & food" },
+  s03: { id: "s03", name: "Pastry", stock: 0, category: "snack & food" },
+  s04: { id: "s04", name: "Onion Rings", stock: 0, category: "snack & food" },
+  s05: { id: "s05", name: "Tahu Crispy", stock: 0, category: "snack & food" },
+  s06: { id: "s06", name: "Nasi Goreng", stock: 0, category: "snack & food" },
+  s07: { id: "s07", name: "French Fries", stock: 0, category: "snack & food" },
 };
 let stockData = JSON.parse(localStorage.getItem(STOCK_STORAGE_KEY) || "null");
 
 if (!stockData || Object.keys(stockData).length === 0) {
   stockData = { ...defaultStockData };
-  localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stockData));
+} else {
+  stockData = { ...defaultStockData, ...stockData };
+}
+localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stockData));
+
+function updateItemDropdown() {
+  const kategori = document.getElementById("select-kategori").value; // Mengambil nilai dari dropdown kategori
+  const selectProduk = document.getElementById("select-produk"); // Dropdown produk
+
+  // Reset isi dropdown produk dan status
+  selectProduk.innerHTML = '<option value="">Pilih Item</option>';
+  document.getElementById("stok-status").classList.add("hidden");
+  document.getElementById("stok-status").innerText = "";
+
+  if (!kategori) {
+    selectProduk.disabled = true;
+    return;
+  }
+
+  selectProduk.disabled = false;
+
+  // Filter item berdasarkan kategori
+  Object.values(stockData).forEach((item) => {
+    if (item.category === kategori) {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent =
+        item.stock <= 0
+          ? `${item.name} (Habis - restok jika persediaan masih ada)`
+          : `${item.name} (${item.stock} stok)`;
+      selectProduk.appendChild(option);
+    }
+  });
 }
 
-function populateStockSelect() {
-  const select = document.getElementById("select-produk");
-  if (!select) return;
-  select.innerHTML = "";
-  Object.values(stockData).forEach((item) => {
-    const option = document.createElement("option");
-    option.value = item.id;
-    option.textContent = `${item.name} (${item.stock} stok)`;
-    select.appendChild(option);
-  });
+function updateStockStatus() {
+  const idProduk = document.getElementById("select-produk").value;
+  const statusEl = document.getElementById("stok-status");
+  if (!idProduk) {
+    statusEl.classList.add("hidden");
+    statusEl.innerText = "";
+    return;
+  }
+  const produk = stockData[idProduk];
+  if (!produk) {
+    statusEl.classList.add("hidden");
+    statusEl.innerText = "";
+    return;
+  }
+  if (produk.stock <= 0) {
+    statusEl.classList.remove("hidden");
+    statusEl.classList.remove("text-emerald-500");
+    statusEl.classList.add("text-amber-400");
+    statusEl.innerText =
+      "Item ini saat ini habis. Silakan isi ulang stok jika persediaan masih tersedia.";
+  } else {
+    statusEl.classList.remove("hidden");
+    statusEl.classList.remove("text-amber-400");
+    statusEl.classList.add("text-emerald-400");
+    statusEl.innerText = `Stok tersedia: ${produk.stock} pcs.`;
+  }
 }
 
 function updateLocalStockState(id, stock, name) {
   if (!id) return;
   const existing = stockData[id] || { id, name: name || id, stock: 0 };
+  console.log(
+    `[Stock] Local update request for ${id} (${name || existing.name}): ${existing.stock} -> ${stock}`,
+  );
   existing.stock = Number(stock);
+  // mark local update time to avoid immediate remote overwrites
+  existing._lastLocalUpdate = new Date().getTime();
   if (name) existing.name = name;
   stockData[id] = existing;
   localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stockData));
-  populateStockSelect();
+  updateItemDropdown();
 }
 
 function applyRemoteStockUpdate(update) {
   if (!update) return;
-  updateLocalStockState(update.id, update.stock, update.name);
+  console.log("[Stock] Remote update received:", update);
+  try {
+    const existing = stockData[update.id];
+    const now = new Date().getTime();
+    if (existing && existing._lastLocalUpdate) {
+      const delta = now - existing._lastLocalUpdate;
+      // if local update was very recent (<=5s), ignore remote update to avoid race
+      if (delta <= 5000) {
+        console.warn(
+          `[Stock] Ignoring remote update for ${update.id} because of recent local change (${delta}ms)`,
+        );
+        return;
+      }
+    }
+    updateLocalStockState(update.id, update.stock, update.name);
+  } catch (e) {
+    console.error("[Stock] Error applying remote update:", e);
+  }
 }
 
 window.onload = () => {
-  populateStockSelect();
+  updateItemDropdown();
   renderActiveOrders();
   setInterval(checkClosingTime, 30000);
 };
+
+// Theme toggle (light/dark)
+function applyTheme(theme) {
+  if (theme === "light") {
+    document.body.classList.add("theme-light");
+    const icon = document.getElementById("theme-icon");
+    if (icon) icon.className = "fas fa-moon text-amber-500";
+  } else {
+    document.body.classList.remove("theme-light");
+    const icon = document.getElementById("theme-icon");
+    if (icon) icon.className = "fas fa-sun text-amber-300";
+  }
+}
+
+function toggleTheme() {
+  const isLight = document.body.classList.contains("theme-light");
+  const next = isLight ? "dark" : "light";
+  applyTheme(next);
+  try {
+    localStorage.setItem("kopral_theme", next);
+  } catch (e) {}
+}
+
+// Apply stored theme on load
+try {
+  const stored = localStorage.getItem("kopral_theme");
+  if (stored) applyTheme(stored);
+} catch (e) {}
 
 // LOGIKA LOGIN DENGAN AKSES TERPISAH
 function prosesLogin() {
@@ -158,7 +288,8 @@ async function startApp() {
     const audio = document.getElementById("notif-sound");
     await audio.play().catch(() => {});
     audio.pause();
-    socket = io("https://kopral-coffee-central.onrender.com", {
+    const serverBase = window.location.origin;
+    socket = io(serverBase, {
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
@@ -183,6 +314,11 @@ async function startApp() {
         .catch(() => {});
     });
     document.getElementById("start-overlay").style.display = "none";
+    // Tambahkan efek watermark ketika aplikasi dimulai
+    const watermark = document.querySelector(".logo-watermark");
+    if (watermark) {
+      watermark.classList.add("show-subtle");
+    }
   } catch (err) {
     Swal.fire("Error", "Gagal terhubung ke server", "error");
   }
@@ -262,60 +398,59 @@ function displayOrderUI(pesanan) {
       : "";
 
   div.innerHTML = `
-        <div class="flex justify-between items-start mb-4">
-            <div>
-                <h3 class="font-bold text-white text-lg">${pesanan.nama}</h3>
-                <div class="flex items-center gap-2 mt-1">
-                    <span class="bg-amber-500/10 text-amber-500 text-[10px] font-bold px-3 py-1 rounded-full
-                        border border-amber-500/20">MEJA ${pesanan.meja}</span>
-                    <span class="badge-order-type">${orderTypeLabel}</span>
-                </div>
-                <div class="mt-2 text-[10px] text-slate-400 font-bold">
-                    <i class="fas fa-clock mr-1"></i> Jam Masuk: ${waktuMasuk}
-                </div>
-                <div class="mt-2 text-[10px] font-bold ${isCash ? "text-red-400" : "text-blue-400"} uppercase">
-                    <i class="fas ${isCash ? "fa-money-bill" : "fa-credit-card"} mr-1"></i>
-                    ${pesanan.pembayaran || "Transfer"}
-                </div>
-                ${namaRekeningUI}
+    <div class="order-card-inner">
+      <div class="flex justify-between items-start mb-4">
+        <div class="flex items-start gap-4">
+          <div class="order-avatar bg-gradient-to-br from-amber-400 to-emerald-400">${pesanan.meja}</div>
+          <div>
+            <h3 class="font-bold text-white text-lg">${pesanan.nama}</h3>
+            <div class="mt-1 flex gap-2 items-center">
+              <span class="pill bg-amber-500/10 text-amber-500 border border-amber-500/20">MEJA ${pesanan.meja}</span>
+              <span class="badge-order-type">${orderTypeLabel}</span>
             </div>
+            <div class="mt-2 text-[12px] text-slate-400"><i class="fas fa-clock mr-1"></i> Jam Masuk: ${waktuMasuk}</div>
+            ${namaRekeningUI}
+          </div>
         </div>
-        <div class="bg-slate-900/50 rounded-2xl p-4 space-y-2 mb-4">
-            ${pesanan.items
-              .map(
-                (i) => `
-                <div class="flex flex-col mb-2">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-slate-300">${i.quantity}x ${i.name}</span>
-                        <span class="font-medium text-slate-100">Rp ${Number(i.price).toLocaleString()}</span>
-                    </div>
-                    ${
-                      i.note
-                        ? `<div class="text-[10px] text-amber-400 italic mt-0.5">
-                        • Catatan: ${i.note}
-                    </div>`
-                        : ""
-                    }
-                </div>
+        <div class="text-right">
+          <div class="text-slate-400 text-sm">#${pesanan.id_pesanan}</div>
+          <div class="mt-2 text-[10px] font-bold ${isCash ? "text-red-400" : "text-blue-400"} uppercase">
+            <i class="fas ${isCash ? "fa-money-bill" : "fa-credit-card"} mr-1"></i> ${pesanan.pembayaran || "Transfer"}
+          </div>
+        </div>
+      </div>
+
+      <div class="order-items rounded-2xl p-4 mb-4">
+        ${pesanan.items
+          .map(
+            (i) => `
+              <div class="order-item">
+                <div class="name text-slate-300 text-sm">${i.quantity}x ${i.name}</div>
+                <div class="price">Rp ${Number(i.price).toLocaleString()}</div>
+                ${i.note ? `<div class="w-full text-[11px] text-amber-400 italic mt-2">• ${i.note}</div>` : ""}
+              </div>
             `,
-              )
-              .join("")}
-            <div class="border-t border-slate-700/50 mt-2 pt-2 flex justify-between font-black text-white">
-                <span>TOTAL</span>
-                <span>Rp ${totalHarga.toLocaleString()}</span>
-            </div>
+          )
+          .join("")}
+
+        <div class="order-total border-t border-slate-700/50 mt-2 pt-2 text-white">
+          <span>TOTAL</span>
+          <span>Rp ${totalHarga.toLocaleString()}</span>
         </div>
+      </div>
+
+      <div class="order-actions grid gap-3">
         ${tombolBukti}
-        <div class="grid grid-cols-1 gap-3">
-            ${tombolBayar}
-            <div class="grid ${!isAdmin ? "grid-cols-2" : "grid-cols-1"} gap-3">
-                ${tombolProses}
-                <button id="btn-selesai-${pesanan.id_pesanan}" ${selesaiAttrs}>
-                    <i class="fas fa-check"></i> SELESAI
-                </button>
-            </div>
+        ${tombolBayar}
+        <div class="grid ${!isAdmin ? "grid-cols-2" : "grid-cols-1"} gap-3">
+          ${tombolProses}
+          <button id="btn-selesai-${pesanan.id_pesanan}" ${selesaiAttrs}>
+            <i class="fas fa-check mr-2"></i> SELESAI
+          </button>
         </div>
-    `;
+      </div>
+    </div>
+  `;
   document.getElementById("container-antrean").prepend(div);
 }
 
@@ -401,24 +536,57 @@ function selesaiPesanan(id) {
                 </span>`,
       }),
     );
+    const pesanan = activeOrders[id] || {};
+    const items = pesanan.items || [];
     const dataPesanan = {
+      id_pesanan: pesanan.id_pesanan || id,
+      nama: pesanan.nama || "-",
+      meja: pesanan.meja || "-",
+      metode: pesanan.metode || "-",
+      pembayaran: pesanan.pembayaran || "-",
+      total:
+        pesanan.total ||
+        items.reduce((acc, i) => acc + Number(i.price) * Number(i.quantity), 0),
       html: cardClone.innerHTML,
-      items: activeOrders[id].items,
-      pembayaran: activeOrders[id].pembayaran,
+      items,
       timestamp: new Date().getTime(),
       tanggal: new Date().toISOString().split("T")[0],
     };
-    const items = activeOrders[id].items;
     items.forEach((item) => {
-      if (activeOrders[item.id]) {
-        activeOrders[item.id].stock -= item.quantity;
+      const stokItem = Object.values(stockData).find(
+        (stockEntry) =>
+          stockEntry.id === item.id || stockEntry.name === item.name,
+      );
+      if (!stokItem) return;
 
-        if (activeOrders[item.id].stock < 0) {
-          activeOrders[item.id].stock = 0;
+      // ensure numeric arithmetic
+      const before = Number(stokItem.stock) || 0;
+      const qty = Number(item.quantity) || 0;
+      const after = before - qty;
+      stokItem.stock = after < 0 ? 0 : after;
+      console.log(
+        `[Stock] Deduct for ${stokItem.id} (${stokItem.name}): ${before} - ${qty} = ${stokItem.stock}`,
+      );
+
+      // Notify server of new stock if socket connected (keep server authoritative)
+      try {
+        if (typeof socket !== "undefined" && socket && socket.connected) {
+          socket.emit("update-stok-realtime", {
+            id: stokItem.id,
+            stock: stokItem.stock,
+            name: stokItem.name,
+          });
+          console.log("[Stock] Emitted update-stok-realtime to server", {
+            id: stokItem.id,
+            stock: stokItem.stock,
+          });
         }
+      } catch (e) {
+        console.error("[Stock] Error emitting stock update:", e);
       }
     });
-    localStorage.setItem("kopral_active_orders", JSON.stringify(activeOrders));
+    localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stockData));
+    updateItemDropdown();
 
     const riwayat = JSON.parse(
       localStorage.getItem("kopral_riwayat_data") || "[]",
@@ -434,6 +602,75 @@ function selesaiPesanan(id) {
   }
 }
 
+function getKategori(name) {
+  const n = name.toLowerCase();
+
+  if (n.includes("matcha") || n.includes("coklat") || n.includes("chocolate")) {
+    return "Non-Coffee";
+  }
+
+  const coffeeKeywords = [
+    "kopi",
+    "coffee",
+    "espresso",
+    "latte",
+    "americano",
+    "cappuccino",
+    "macchiato",
+    "mocha",
+    "affogato",
+    "kopral",
+  ];
+  if (coffeeKeywords.some((keyword) => n.includes(keyword))) {
+    return "Coffee";
+  }
+
+  const snackKeywords = [
+    "snack",
+    "food",
+    "makan",
+    "gorengan",
+    "camilan",
+    "mie",
+    "nasi",
+    "fries",
+    "kentang",
+    "croissant",
+    "dimsum",
+    "toast",
+    "burger",
+    "sandwich",
+    "pastry",
+    "roti",
+    "pisang",
+    "siomay",
+    "bakso",
+    "ayam",
+  ];
+  if (snackKeywords.some((keyword) => n.includes(keyword))) {
+    return "Snack & Food";
+  }
+
+  const nonCoffeeKeywords = [
+    "tea",
+    "teh",
+    "squash",
+    "susu",
+    "milk",
+    "mocktail",
+    "jus",
+    "juice",
+    "ice",
+    "lemon",
+    "yakult",
+  ];
+  if (nonCoffeeKeywords.some((keyword) => n.includes(keyword))) {
+    return "Non-Coffee";
+  }
+
+  return "Non-Coffee";
+}
+
 function cetakLaporanPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -445,79 +682,6 @@ function cetakLaporanPDF() {
     return;
   }
 
-  const getKategori = (name) => {
-    const n = name.toLowerCase();
-
-    if (
-      n.includes("matcha") ||
-      n.includes("coklat") ||
-      n.includes("chocolate")
-    ) {
-      return "Non-Coffee";
-    }
-
-    const coffeeKeywords = [
-      "kopi",
-      "coffee",
-      "espresso",
-      "latte",
-      "americano",
-      "cappuccino",
-      "macchiato",
-      "mocha",
-      "affogato",
-      "kopral",
-    ];
-    if (coffeeKeywords.some((keyword) => n.includes(keyword))) {
-      return "Coffee";
-    }
-
-    const snackKeywords = [
-      "snack",
-      "food",
-      "makan",
-      "gorengan",
-      "camilan",
-      "mie",
-      "nasi",
-      "fries",
-      "kentang",
-      "croissant",
-      "dimsum",
-      "toast",
-      "burger",
-      "sandwich",
-      "pastry",
-      "roti",
-      "pisang",
-      "siomay",
-      "bakso",
-      "ayam",
-    ];
-    if (snackKeywords.some((keyword) => n.includes(keyword))) {
-      return "Snack & Food";
-    }
-
-    const nonCoffeeKeywords = [
-      "tea",
-      "teh",
-      "squash",
-      "susu",
-      "milk",
-      "mocktail",
-      "jus",
-      "juice",
-      "ice",
-      "lemon",
-      "yakult",
-    ];
-    if (nonCoffeeKeywords.some((keyword) => n.includes(keyword))) {
-      return "Non-Coffee";
-    }
-
-    return "Non-Coffee";
-  };
-
   const dataTerstruktur = {
     Coffee: {},
     "Snack & Food": {},
@@ -525,6 +689,8 @@ function cetakLaporanPDF() {
   };
   let totalCash = 0;
   let totalTransfer = 0;
+  let totalOrders = riwayat.length;
+  const allItems = {};
 
   riwayat.forEach((r) => {
     const subtotalOrder = r.items.reduce(
@@ -546,70 +712,111 @@ function cetakLaporanPDF() {
         dataTerstruktur[kat][i.name] = { qty: 0, price: i.price };
       }
       dataTerstruktur[kat][i.name].qty += parseInt(i.quantity, 10);
+
+      if (!allItems[i.name]) {
+        allItems[i.name] = { qty: 0, revenue: 0 };
+      }
+      allItems[i.name].qty += parseInt(i.quantity, 10);
+      allItems[i.name].revenue +=
+        parseInt(i.quantity, 10) * parseFloat(i.price);
     });
   });
 
   doc.setFontSize(16);
   doc.text("LAPORAN PENJUALAN KOPRAL", 14, 15);
   doc.setFontSize(10);
-  doc.text(`Total Omzet CASH: Rp ${totalCash.toLocaleString()}`, 14, 25);
-  doc.text(
-    `Total Omzet TRANSFER: Rp ${totalTransfer.toLocaleString()}`,
-    14,
-    30,
-  );
+  doc.text(`Tanggal: ${new Date().toLocaleDateString("id-ID")}`, 14, 22);
+  doc.text(`Jumlah Pesanan: ${totalOrders}`, 14, 28);
+  doc.text(`Omzet CASH: Rp ${totalCash.toLocaleString()}`, 14, 34);
+  doc.text(`Omzet TRANSFER: Rp ${totalTransfer.toLocaleString()}`, 14, 40);
   doc.text(
     `TOTAL KESELURUHAN: Rp ${(totalCash + totalTransfer).toLocaleString()}`,
     14,
-    35,
+    46,
   );
 
-  let yPos = 45;
-  for (const [kategori, items] of Object.entries(dataTerstruktur)) {
-    if (Object.keys(items).length === 0) {
-      continue;
+  let yPos = 58;
+  riwayat.forEach((r, index) => {
+    if (yPos > 250) {
+      doc.addPage();
+      yPos = 15;
     }
-
-    doc.setFontSize(12);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text(`Kategori: ${kategori}`, 14, yPos);
+    doc.text(`Pesanan #${index + 1} - ${r.id_pesanan || "-"}`, 14, yPos);
+    yPos += 6;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Nama: ${r.nama || "-"}`, 14, yPos);
+    doc.text(`Meja: ${r.meja || "-"}`, 80, yPos);
     yPos += 5;
+    doc.text(`Metode: ${r.metode || "-"}`, 14, yPos);
+    doc.text(`Pembayaran: ${r.pembayaran || "-"}`, 80, yPos);
+    yPos += 5;
+    doc.text(
+      `Total Order: Rp ${Number(r.total || 0).toLocaleString()}`,
+      14,
+      yPos,
+    );
+    yPos += 6;
 
-    const body = Object.keys(items).map((name) => [
-      name,
-      items[name].qty,
-      `Rp ${Number(items[name].price).toLocaleString()}`,
-      `Rp ${(items[name].qty * items[name].price).toLocaleString()}`,
+    const body = r.items.map((i) => [
+      i.name,
+      i.quantity,
+      `Rp ${Number(i.price).toLocaleString()}`,
+      `Rp ${Number(i.price * i.quantity).toLocaleString()}`,
+      i.note || "-",
     ]);
 
     doc.autoTable({
       startY: yPos,
-      head: [["Nama Item", "Qty", "Harga", "Subtotal"]],
+      head: [["Item", "Qty", "Harga", "Subtotal", "Catatan"]],
       body,
-      theme: "striped",
-      headStyles: { fillColor: [51, 65, 85] },
+      theme: "grid",
+      headStyles: { fillColor: [30, 41, 59] },
+      styles: { fontSize: 8 },
+      margin: { left: 14, right: 14 },
     });
 
-    yPos = doc.lastAutoTable.finalY + 10;
+    const orderTotal = body.reduce((sum, row) => {
+      const subtotal = Number(row[3].replace(/[^0-9]/g, ""));
+      return sum + subtotal;
+    }, 0);
+
+    yPos = doc.lastAutoTable.finalY + 8;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Total Pesanan: Rp ${orderTotal.toLocaleString()}`, 14, yPos);
+    yPos += 10;
+  });
+
+  if (yPos > 220) {
+    doc.addPage();
+    yPos = 15;
   }
 
   doc.setFontSize(12);
   doc.setFont("helvetica", "bold");
-  doc.text("Terlaris:", 14, yPos);
+  doc.text("Ringkasan Terlaris", 14, yPos);
+  yPos += 6;
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
 
-  yPos += 7;
-  Object.keys(dataTerstruktur).forEach((kat) => {
-    const items = dataTerstruktur[kat];
-    let terlaris = { name: "-", qty: 0 };
-    Object.keys(items).forEach((name) => {
-      if (items[name].qty > terlaris.qty) {
-        terlaris = { name, qty: items[name].qty };
-      }
-    });
-    doc.text(`Kategori ${kat} : ${terlaris.name} (★)`, 14, yPos);
+  const topItems = Object.entries(allItems)
+    .sort((a, b) => b[1].qty - a[1].qty)
+    .slice(0, 5);
+
+  topItems.forEach(([name, stats], idx) => {
+    doc.text(
+      `${idx + 1}. ${name} - ${stats.qty} pcs (Rp ${stats.revenue.toLocaleString()})`,
+      14,
+      yPos,
+    );
     yPos += 5;
+    if (yPos > 280) {
+      doc.addPage();
+      yPos = 15;
+    }
   });
 
   doc.save(`Laporan_Penjualan_${new Date().toISOString().split("T")[0]}.pdf`);
@@ -623,11 +830,58 @@ function downloadCSV() {
     Swal.fire("Oops", "Data kosong", "info");
     return;
   }
-  let csv = "Tanggal,Items,Total\n";
+
+  const rows = [
+    [
+      "Tanggal",
+      "ID Pesanan",
+      "Nama Pelanggan",
+      "Meja",
+      "Metode",
+      "Pembayaran",
+      "Kategori",
+      "Item",
+      "Qty",
+      "Harga Satuan",
+      "Subtotal",
+      "Total Item",
+      "Total Order",
+    ],
+  ];
+
   riwayat.forEach((r) => {
-    const items = r.items.map((i) => `${i.quantity}x ${i.name}`).join(";");
-    csv += `${r.tanggal},"${items}",${r.items.reduce((acc, i) => acc + i.price * i.quantity, 0)}\n`;
+    const totalOrder =
+      r.total || r.items.reduce((acc, i) => acc + i.price * i.quantity, 0);
+    r.items.forEach((i) => {
+      rows.push([
+        r.tanggal,
+        r.id_pesanan || "-",
+        r.nama || "-",
+        r.meja || "-",
+        r.metode || "-",
+        r.pembayaran || "-",
+        getKategori(i.name),
+        i.name,
+        i.quantity,
+        i.price,
+        i.price * i.quantity,
+        i.quantity,
+        totalOrder,
+      ]);
+    });
   });
+
+  const csv = rows
+    .map((row) =>
+      row
+        .map((field) => {
+          const cell = String(field).replace(/"/g, '""');
+          return `"${cell}"`;
+        })
+        .join(","),
+    )
+    .join("\n");
+
   const blob = new Blob([csv], { type: "text/csv" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -734,7 +988,12 @@ function toggleModal(show) {
 function toggleModalStok(show) {
   const modal = document.getElementById("modal-stok");
   if (show) {
-    populateStockSelect();
+    // Reset pilihan kategori dan stok saat modal dibuka kembali
+    document.getElementById("select-kategori").value = "";
+    document.getElementById("input-stok").value = "";
+    document.getElementById("stok-status").classList.add("hidden");
+    document.getElementById("stok-status").innerText = "";
+    updateItemDropdown();
     modal.classList.remove("hidden");
   } else {
     modal.classList.add("hidden");
@@ -757,18 +1016,15 @@ async function prosesStok() {
   }
 
   try {
-    const response = await fetch(
-      "https://kopral-coffee-central.onrender.com/update-stok",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: idProduk,
-          stock: jumlahBaru,
-          name: produkTerpilih?.name || idProduk,
-        }),
-      },
-    );
+    const response = await fetch("/update-stok", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id: idProduk,
+        stock: jumlahBaru,
+        name: produkTerpilih?.name || idProduk,
+      }),
+    });
 
     if (!response.ok) throw new Error("Gagal update ke server");
 
