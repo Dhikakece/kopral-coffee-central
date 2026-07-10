@@ -552,39 +552,13 @@ function selesaiPesanan(id) {
       timestamp: new Date().getTime(),
       tanggal: new Date().toISOString().split("T")[0],
     };
-    items.forEach((item) => {
-      const stokItem = Object.values(stockData).find(
-        (stockEntry) =>
-          stockEntry.id === item.id || stockEntry.name === item.name,
-      );
-      if (!stokItem) return;
-
-      // ensure numeric arithmetic
-      const before = Number(stokItem.stock) || 0;
-      const qty = Number(item.quantity) || 0;
-      const after = before - qty;
-      stokItem.stock = after < 0 ? 0 : after;
+    // Stok sudah dikurangi oleh server saat pesanan masuk. Jangan kurangi lagi di sini.
+    // Hanya update UI lokal jika diperlukan.
+    if (typeof socket !== "undefined" && socket && socket.connected) {
       console.log(
-        `[Stock] Deduct for ${stokItem.id} (${stokItem.name}): ${before} - ${qty} = ${stokItem.stock}`,
+        "[Stock] Pesanan selesai, stok akan tetap sinkron dari server yang sudah mengurangi saat order masuk.",
       );
-
-      // Notify server of new stock if socket connected (keep server authoritative)
-      try {
-        if (typeof socket !== "undefined" && socket && socket.connected) {
-          socket.emit("update-stok-realtime", {
-            id: stokItem.id,
-            stock: stokItem.stock,
-            name: stokItem.name,
-          });
-          console.log("[Stock] Emitted update-stok-realtime to server", {
-            id: stokItem.id,
-            stock: stokItem.stock,
-          });
-        }
-      } catch (e) {
-        console.error("[Stock] Error emitting stock update:", e);
-      }
-    });
+    }
     localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stockData));
     updateItemDropdown();
 
