@@ -64,9 +64,345 @@
         left: 50%;
         transform: translate(-50%, -50%);
         width: 400px;
-        opacity: 0.08;
+        opacity: 0.06;
         pointer-events: none;
         z-index: 0;
+      }
+
+      .glass-panel {
+        background: rgba(15, 23, 42, 0.92);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        box-shadow: 0 32px 90px rgba(15, 23, 42, 0.45);
+      }
+
+      .hero-background {
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(
+            circle at top left,
+            rgba(248, 113, 23, 0.18),
+            transparent 22%
+          ),
+          radial-gradient(
+            circle at bottom right,
+            rgba(34, 197, 94, 0.16),
+            transparent 20%
+          ),
+          radial-gradient(
+            circle at center,
+            rgba(59, 130, 246, 0.08),
+            transparent 20%
+          );
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .floating-icon {
+        animation: floatY 6s ease-in-out infinite;
+      }
+
+      .glow-button {
+        transition:
+          transform 0.25s ease,
+          box-shadow 0.25s ease;
+      }
+
+      .glow-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 18px 45px rgba(250, 204, 21, 0.28);
+      }
+
+      @keyframes floatY {
+        0%,
+        100% {
+          transform: translateY(0);
+        }
+        50% {
+          transform: translateY(-10px);
+        }
+      }
+
+      /* Header & brand styling */
+      header.site-top {
+        background: linear-gradient(
+          90deg,
+          rgba(2, 6, 23, 0.9),
+          rgba(15, 23, 42, 0.95)
+        );
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(6px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 800;
+      }
+
+      .brand .logo-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: linear-gradient(
+          135deg,
+          rgba(245, 158, 11, 0.15),
+          rgba(34, 197, 94, 0.06)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.04);
+      }
+
+      .brand .title {
+        color: #fff;
+        font-size: 16px;
+        letter-spacing: 0.6px;
+      }
+
+      .nav-btn {
+        padding: 0.5rem 0.9rem;
+        border-radius: 9999px;
+        font-weight: 800;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 9999px;
+        background: rgba(34, 197, 94, 0.06);
+        color: #86efac;
+        font-weight: 700;
+        font-size: 12px;
+        border: 1px solid rgba(34, 197, 94, 0.09);
+      }
+
+      .logo-watermark {
+        mix-blend-mode: multiply;
+        filter: blur(0.5px) saturate(0.9);
+        transition:
+          transform 0.6s ease,
+          opacity 0.6s ease;
+      }
+
+      .logo-watermark.show-subtle {
+        transform: scale(1.02);
+        opacity: 0.08;
+      }
+
+      /* Status dot and micro-interactions */
+      .status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 9999px;
+        display: inline-block;
+        transition:
+          box-shadow 200ms ease,
+          transform 160ms ease,
+          background-color 200ms ease;
+      }
+
+      .status-dot.online {
+        background-color: #22c55e;
+        box-shadow: 0 6px 18px rgba(34, 197, 94, 0.18);
+        transform: translateY(-1px);
+      }
+
+      .nav-btn {
+        transition:
+          transform 160ms ease,
+          box-shadow 180ms ease,
+          opacity 180ms ease;
+      }
+
+      .nav-btn:active {
+        transform: translateY(1px) scale(0.995);
+        opacity: 0.98;
+      }
+
+      input:focus,
+      select:focus,
+      button:focus {
+        outline: none;
+        box-shadow: 0 6px 22px rgba(99, 102, 241, 0.06);
+      }
+
+      /* subtle glass border for cards */
+      .card-panel,
+      .glass-panel,
+      .hero-background {
+        border: 1px solid rgba(255, 255, 255, 0.02);
+      }
+
+      /* Entrance animations */
+      .fade-in {
+        animation: fadeInUp 0.6s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+      }
+
+      @keyframes fadeInUp {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Card hover for antrean */
+      .group {
+        transition:
+          transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1),
+          box-shadow 220ms ease,
+          border-color 220ms ease,
+          background-color 220ms ease;
+        will-change: transform;
+      }
+
+      .group:hover {
+        transform: translateY(-6px) scale(1.01);
+        box-shadow: 0 30px 60px rgba(2, 6, 23, 0.55);
+        border-color: rgba(255, 255, 255, 0.06);
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.02),
+          rgba(255, 255, 255, 0.005)
+        );
+      }
+
+      /* Light theme overrides */
+      body.theme-light {
+        background: #f8fafc;
+        color: #0f172a;
+      }
+
+      body.theme-light header.site-top {
+        background: linear-gradient(90deg, #ffffff, #f1f5f9);
+        color: #0f172a;
+      }
+
+      body.theme-light .group {
+        background: #ffffff;
+        border-color: rgba(2, 6, 23, 0.04);
+        color: #0f172a;
+      }
+
+      body.theme-light .logo-watermark {
+        opacity: 0.04;
+        mix-blend-mode: normal;
+        filter: none;
+      }
+
+      body.theme-light .nav-btn.bg-slate-700 {
+        background: #e6eef8;
+        color: #0f172a;
+      }
+
+      /* Order card styles */
+      .order-card-inner {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .order-avatar {
+        width: 56px;
+        height: 56px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        color: #0f172a;
+        box-shadow: 0 8px 30px rgba(2, 6, 23, 0.45);
+      }
+
+      .order-items {
+        background: linear-gradient(
+          180deg,
+          rgba(2, 6, 23, 0.26),
+          rgba(2, 6, 23, 0.12)
+        );
+        border: 1px solid rgba(255, 255, 255, 0.02);
+      }
+
+      .order-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px dashed rgba(148, 163, 184, 0.03);
+      }
+
+      .order-item:last-child {
+        border-bottom: none;
+      }
+
+      .order-item .name {
+        color: #e6eef8;
+      }
+      .order-item .price {
+        font-weight: 700;
+        color: #fff;
+      }
+
+      .order-total {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 8px;
+        font-weight: 900;
+        font-size: 1rem;
+      }
+
+      .pill {
+        padding: 6px 10px;
+        border-radius: 9999px;
+        font-weight: 800;
+        font-size: 11px;
+      }
+
+      .order-actions .btn-primary {
+        background: linear-gradient(90deg, #2563eb, #3b82f6);
+        color: #fff;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-weight: 800;
+      }
+
+      .order-actions .btn-success {
+        background: linear-gradient(90deg, #16a34a, #22c55e);
+        color: #042018;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-weight: 800;
+      }
+
+      .badge-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 0.95rem;
+        border-radius: 9999px;
+        border: 1px solid rgba(245, 158, 11, 0.2);
+        background: rgba(245, 158, 11, 0.12);
+        color: #f59e0b;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .card-panel {
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.12);
       }
 
       main {
@@ -105,74 +441,116 @@
 
       <div
         id="login-form-container"
-        class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm transition-all duration-500"
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl transition-all duration-500 fade-in"
       >
         <div
-          class="bg-slate-900/90 border border-slate-700/50 p-8 rounded-[2rem] w-full max-w-sm shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl"
+          class="relative w-full max-w-md rounded-[2.5rem] border border-white/10 bg-slate-900/80 p-8 shadow-[0_30px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl"
         >
-          <div class="text-center mb-8">
-            <h2 class="text-2xl font-black text-white tracking-tight">LOGIN</h2>
-            <div
-              class="mt-2 text-slate-500 font-bold text-[10px] uppercase tracking-[0.2em]"
-            >
-              Admin <span class="text-amber-500">/</span> Dapur
-            </div>
+          <div class="hero-background rounded-[2.5rem]"></div>
+          <div
+            class="absolute -top-10 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 p-4 shadow-2xl"
+          >
+            <i class="fas fa-coffee text-2xl text-slate-950 floating-icon"></i>
           </div>
+          <div class="text-center mt-8 mb-8">
+            <h2 class="text-3xl font-black text-white tracking-tight">
+              MASUK KASIR
+            </h2>
+            <p class="text-slate-400 mt-2 text-sm max-w-xs mx-auto">
+              Akses cepat untuk Admin atau Dapur dengan keamanan dan tampilan
+              modern.
+            </p>
+          </div>
+
           <div class="space-y-4">
-            <div>
-              <input
-                type="text"
-                id="input-username"
-                placeholder="USERNAME"
-                class="w-full bg-slate-950 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-slate-600"
-              />
+            <div
+              class="rounded-3xl border border-slate-700/60 bg-slate-950/80 p-4 shadow-inner"
+            >
+              <label
+                class="block text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-2"
+              >
+                Username
+              </label>
+              <div class="relative">
+                <span
+                  class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-500"
+                >
+                  <i class="fas fa-user"></i>
+                </span>
+                <input
+                  type="text"
+                  id="input-username"
+                  placeholder="Masukkan username"
+                  class="w-full bg-transparent pl-11 pr-4 text-white p-4 rounded-3xl border border-slate-700 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-slate-600"
+                />
+              </div>
               <p
                 id="error-user"
-                class="text-red-500 text-[9px] mt-1 ml-2 font-bold hidden opacity-0 transition-opacity"
+                class="text-red-500 text-[9px] mt-3 ml-2 font-bold hidden opacity-0 transition-opacity"
               >
-                * USERNAME : SALAH
+                * USERNAME SALAH
               </p>
             </div>
-            <div>
-              <input
-                type="password"
-                id="input-password"
-                placeholder="PASSWORD"
-                class="w-full bg-slate-950 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-slate-600"
-              />
+            <div
+              class="rounded-3xl border border-slate-700/60 bg-slate-950/80 p-4 shadow-inner"
+            >
+              <label
+                class="block text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] mb-2"
+              >
+                Password
+              </label>
+              <div class="relative">
+                <span
+                  class="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-500"
+                >
+                  <i class="fas fa-lock"></i>
+                </span>
+                <input
+                  type="password"
+                  id="input-password"
+                  placeholder="Masukkan password"
+                  class="w-full bg-transparent pl-11 pr-4 text-white p-4 rounded-3xl border border-slate-700 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder:text-slate-600"
+                />
+              </div>
               <p
                 id="error-pass"
-                class="text-red-500 text-[9px] mt-1 ml-2 font-bold hidden opacity-0 transition-opacity"
+                class="text-red-500 text-[9px] mt-3 ml-2 font-bold hidden opacity-0 transition-opacity"
               >
-                * PASSWORD : SALAH
+                * PASSWORD SALAH
               </p>
             </div>
             <button
               onclick="prosesLogin()"
-              class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-black py-4 rounded-2xl mt-4 transition-all transform active:scale-95 shadow-[0_10px_20px_-5px_rgba(245,158,11,0.3)]"
+              class="w-full rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 text-slate-950 py-4 font-black uppercase tracking-[0.1em] shadow-lg shadow-amber-500/20 hover:scale-[1.01] transition-transform"
             >
-              MASUK
+              Masuk Sekarang
             </button>
             <p
-              class="text-center text-slate-600 text-[9px] mt-6 font-bold uppercase tracking-widest"
+              class="text-center text-slate-500 text-[10px] mt-3 uppercase tracking-[0.2em]"
             >
-              ! Isi data dengan benar !
+              Admin / Dapur
             </p>
           </div>
         </div>
       </div>
 
       <header
-        class="bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40"
+        class="site-top bg-slate-800 border-b border-slate-700 px-6 py-4 flex justify-between items-center sticky top-0 z-40"
       >
-        <h1 class="font-bold text-white">
-          KOPRAL <span class="text-amber-400">POS MONITOR</span>
-        </h1>
+        <div class="brand">
+          <div class="logo-chip">
+            <i class="fas fa-coffee text-amber-400"></i>
+          </div>
+          <div>
+            <div class="title">
+              KOPRAL <span class="text-amber-400">POS</span>
+            </div>
+            <div class="text-slate-400 text-xs">Monitor</div>
+          </div>
+        </div>
+
         <div class="flex items-center gap-4">
-          <div
-            id="status-koneksi"
-            class="flex items-center gap-2 text-[9px] font-bold text-slate-500"
-          >
+          <div id="status-koneksi" class="status-badge">
             <span
               id="dot-status"
               class="w-2 h-2 rounded-full bg-slate-600"
@@ -182,31 +560,62 @@
 
           <button
             onclick="toggleModalStok(true)"
-            class="bg-amber-600 px-4 py-2 rounded-xl text-xs font-bold hover:bg-amber-700 transition text-white"
+            class="nav-btn bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950"
           >
-            <i class="fas fa-boxes mr-1"></i> Stok
+            <i class="fas fa-boxes"></i>
+            Stok
           </button>
 
           <button
             onclick="toggleModal(true)"
-            class="bg-slate-700 px-4 py-2 rounded-xl text-xs font-bold hover:bg-slate-600 transition"
+            class="nav-btn bg-slate-700 text-white/90"
           >
             Pengaturan
+          </button>
+          <button
+            id="theme-toggle"
+            onclick="toggleTheme()"
+            title="Toggle theme"
+            class="nav-btn bg-slate-700 text-white/90"
+          >
+            <i id="theme-icon" class="fas fa-sun text-amber-300"></i>
           </button>
         </div>
       </header>
 
       <div
         id="start-overlay"
-        class="fixed inset-0 bg-slate-950 z-[9999] flex items-center justify-center"
+        class="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-xl fade-in"
       >
-        <button
-          onclick="startApp()"
-          id="btn-start-app"
-          class="bg-amber-500 text-slate-950 font-bold px-10 py-4 rounded-2xl animate-pulse shadow-2xl text-lg"
+        <div
+          class="w-full max-w-md rounded-[2.5rem] border border-white/10 bg-slate-900/90 p-8 shadow-[0_40px_100px_rgba(15,23,42,0.7)]"
         >
-          MULAI APLIKASI KASIR
-        </button>
+          <div class="hero-background rounded-[2.5rem]"></div>
+          <div class="text-center mb-8">
+            <div
+              class="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-amber-400 to-emerald-400 shadow-xl shadow-amber-500/20"
+            >
+              <i
+                class="fas fa-cash-register text-3xl text-slate-950 floating-icon"
+              ></i>
+            </div>
+            <h1 class="text-3xl font-black text-white tracking-tight">
+              KOPRAL POS
+            </h1>
+            <p class="text-slate-400 mt-3 text-sm leading-6">
+              Selamat datang di monitor kasir Kopral. Mulai aplikasi dan layani
+              pesanan lebih cepat dengan antarmuka yang rapi.
+            </p>
+          </div>
+          <button
+            onclick="startApp()"
+            id="btn-start-app"
+            class="mx-auto flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 px-10 py-4 text-lg font-black text-slate-950 shadow-2xl shadow-amber-500/20 glow-button"
+          >
+            <i class="fas fa-play"></i>
+            MULAI APLIKASI KASIR
+          </button>
+        </div>
       </div>
 
       <div
@@ -217,24 +626,26 @@
           onclick="toggleModal(false)"
           class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
         ></div>
-        <div
-          class="relative w-full max-w-xl bg-slate-800/90 border border-slate-700/50 rounded-3xl p-6 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-xl"
-        >
-          <div
-            class="flex justify-between items-center mb-6 border-b border-slate-700 pb-4"
-          >
-            <h2 class="font-bold text-white text-lg flex items-center gap-2">
-              <i class="fas fa-cog text-amber-400"></i> Pengaturan & Riwayat
-            </h2>
+        <div class="relative w-full max-w-xl glass-panel rounded-[2rem] p-6">
+          <div class="flex justify-between items-start gap-4 mb-6">
+            <div>
+              <h2 class="font-bold text-white text-2xl flex items-center gap-3">
+                <i class="fas fa-cog text-amber-400"></i> Pengaturan & Riwayat
+              </h2>
+              <p class="text-slate-400 mt-2 text-sm max-w-xl">
+                Kelola arsip penjualan, cetak laporan, dan bersihkan riwayat
+                lama dengan cepat dalam satu tampilan yang rapi.
+              </p>
+            </div>
             <button
               onclick="toggleModal(false)"
-              class="text-slate-400 hover:text-white transition-colors"
+              class="text-slate-400 hover:text-white transition-colors rounded-full p-3 bg-slate-900/60 border border-slate-700/50"
             >
               <i class="fas fa-times"></i>
             </button>
           </div>
 
-          <div class="space-y-4">
+          <div class="grid gap-4">
             <div>
               <label
                 class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2"
@@ -245,33 +656,38 @@
                 type="date"
                 id="input-tanggal"
                 onchange="filterRiwayat()"
-                class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-xl text-sm focus:border-amber-500 outline-none transition-all"
+                class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-3xl text-sm focus:border-amber-500 outline-none transition-all"
               />
             </div>
-            <div class="grid grid-cols-1 gap-2" id="admin-actions">
+
+            <div
+              class="grid grid-cols-1 sm:grid-cols-3 gap-3"
+              id="admin-actions"
+            >
               <button
                 onclick="cetakLaporanPDF()"
-                class="bg-blue-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-blue-700 transition"
+                class="bg-gradient-to-r from-sky-600 to-blue-500 text-white py-4 rounded-3xl text-sm font-bold shadow-lg shadow-sky-500/20 hover:from-sky-500 hover:to-blue-600 transition"
               >
                 <i class="fas fa-file-pdf mr-2"></i> CETAK PDF
               </button>
               <button
                 onclick="downloadCSV()"
-                class="bg-emerald-600 text-white py-3 rounded-xl text-xs font-bold hover:bg-emerald-700 transition"
+                class="bg-gradient-to-r from-emerald-600 to-lime-500 text-white py-4 rounded-3xl text-sm font-bold shadow-lg shadow-emerald-500/20 hover:from-emerald-500 hover:to-lime-500 transition"
               >
-                <i class="fas fa-file-csv mr-2"></i> EXPORT CSV (ARSIP)
+                <i class="fas fa-file-csv mr-2"></i> EXPORT CSV
               </button>
               <button
                 onclick="hapusRiwayatManual()"
-                class="bg-red-500/10 border border-red-500/20 text-red-400 py-3 rounded-xl text-xs font-bold hover:bg-red-500/20 transition"
+                class="bg-slate-900/80 border border-red-500/20 text-red-400 py-4 rounded-3xl text-sm font-bold hover:bg-red-500/10 transition"
               >
-                <i class="fas fa-trash mr-2"></i> HAPUS RIWAYAT > 30 HARI
+                <i class="fas fa-trash mr-2"></i> HAPUS RIWAYAT
               </button>
             </div>
           </div>
+
           <div
             id="container-riwayat"
-            class="mt-6 space-y-3 text-xs max-h-[300px] overflow-y-auto pr-2 custom-scrollbar"
+            class="mt-6 bg-slate-900/80 border border-slate-700/60 rounded-3xl p-4 space-y-3 text-xs max-h-[320px] overflow-y-auto pr-2 custom-scrollbar"
           ></div>
         </div>
       </div>
@@ -284,32 +700,80 @@
           onclick="toggleModalStok(false)"
           class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
         ></div>
-        <div
-          class="relative w-full max-w-sm bg-slate-800/90 border border-slate-700/50 rounded-3xl p-6 shadow-2xl backdrop-blur-xl"
-        >
-          <h2 class="font-bold text-white text-lg mb-4 flex items-center gap-2">
-            <i class="fas fa-boxes text-amber-400"></i> Input Stok
-          </h2>
-          <div class="space-y-4">
-            <select
-              id="select-produk"
-              class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-xl text-sm"
-            >
-              <option value="m01">Pure Matcha Latte</option>
-              <option value="m02">Chocolate</option>
-            </select>
-            <input
-              type="number"
-              id="input-stok"
-              placeholder="Jumlah stok baru..."
-              class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-xl text-sm"
-            />
-            <button
-              onclick="prosesStok()"
-              class="w-full bg-amber-600 text-white py-3 rounded-xl text-sm font-bold hover:bg-amber-700 transition"
-            >
-              SIMPAN STOK
-            </button>
+        <div class="relative w-full max-w-sm glass-panel rounded-[2rem] p-6">
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 class="font-bold text-white text-2xl flex items-center gap-3">
+                <i class="fas fa-boxes text-amber-400"></i> Input Stok
+              </h2>
+              <p class="text-slate-400 text-sm mt-1">
+                Atur stok item kasir dengan cepat, pilih kategori dahulu agar
+                daftar tidak berantakan.
+              </p>
+            </div>
+            <span class="badge-pill">kopral stok</span>
+          </div>
+
+          <div class="grid gap-4">
+            <div class="card-panel rounded-3xl p-4">
+              <label
+                class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2"
+              >
+                Kategori
+              </label>
+              <select
+                id="select-kategori"
+                onchange="updateItemDropdown()"
+                class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-3xl text-sm outline-none focus:border-amber-500 transition"
+              >
+                <option value="">Pilih Kategori</option>
+                <option value="coffee">Coffee</option>
+                <option value="non-coffee">Non-Coffee</option>
+                <option value="snack & food">Snack & Food</option>
+              </select>
+            </div>
+
+            <div class="card-panel rounded-3xl p-4">
+              <label
+                class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2"
+              >
+                Item
+              </label>
+              <select
+                id="select-produk"
+                onchange="updateStockStatus()"
+                disabled
+                class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-3xl text-sm outline-none focus:border-amber-500 transition"
+              >
+                <option value="">Pilih Item</option>
+              </select>
+              <p
+                id="stok-status"
+                class="text-xs text-slate-300 italic mt-3 hidden"
+              ></p>
+            </div>
+
+            <div class="card-panel rounded-3xl p-4 space-y-3">
+              <div>
+                <label
+                  class="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2"
+                >
+                  Stok Baru
+                </label>
+                <input
+                  type="number"
+                  id="input-stok"
+                  placeholder="Jumlah stok baru..."
+                  class="w-full bg-slate-950 border border-slate-700 text-white p-3 rounded-3xl text-sm outline-none focus:border-amber-500 transition"
+                />
+              </div>
+              <button
+                onclick="prosesStok()"
+                class="w-full bg-amber-600 text-slate-950 py-3 rounded-3xl text-sm font-bold hover:bg-amber-500 transition shadow-lg shadow-amber-500/20"
+              >
+                SIMPAN STOK
+              </button>
+            </div>
           </div>
         </div>
       </div>
