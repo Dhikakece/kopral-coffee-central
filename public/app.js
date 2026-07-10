@@ -428,10 +428,12 @@ function displayOrderUI(pesanan) {
             </button>`
     : "";
 
+  const buktiUrl = pesanan.bukti_transfer || pesanan.buktiTransfer || "";
   const tombolBukti =
-    pesanan.bukti_transfer && !isDapur
+    buktiUrl && !isDapur
       ? `<button
-                onclick="showBukti('${pesanan.bukti_transfer}')"
+                id="btn-bukti-${pesanan.id_pesanan}"
+                data-bukti="${String(buktiUrl).replace(/"/g, "&quot;")}"
                 class="w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold
                     py-2 rounded-xl transition block text-center"
             >
@@ -513,6 +515,20 @@ function displayOrderUI(pesanan) {
     </div>
   `;
   document.getElementById("container-antrean").prepend(div);
+  // Pasang event listener aman untuk tombol bukti (jangan gunakan inline onclick)
+  try {
+    if (buktiUrl && !isDapur) {
+      const btn = document.getElementById(`btn-bukti-${pesanan.id_pesanan}`);
+      if (btn) {
+        btn.addEventListener("click", (e) => {
+          const url = btn.getAttribute("data-bukti") || buktiUrl;
+          showBukti(url);
+        });
+      }
+    }
+  } catch (e) {
+    console.error("[UI] Gagal pasang listener tombol bukti:", e);
+  }
 }
 
 function showBukti(url) {
