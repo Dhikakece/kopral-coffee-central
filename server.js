@@ -224,7 +224,8 @@ app.post("/api/pesanan-masuk", (req, res) => {
   }
 
   // Kirim data pesanan secara REAL-TIME ke dashboard kasir / aplikasi Android
-  io.emit("notifikasi-pesanan-baru", dataPesanan);
+  const stocksDeducted = updatedStocks.length > 0;
+  io.emit("notifikasi-pesanan-baru", { ...dataPesanan, stocksDeducted });
 
   // Kirim respon balik sukses ke website pelanggan
   res.status(200).json({
@@ -235,6 +236,7 @@ app.post("/api/pesanan-masuk", (req, res) => {
       name: item.name,
       stock: item.stock,
     })),
+    stocksDeducted,
   });
 });
 
