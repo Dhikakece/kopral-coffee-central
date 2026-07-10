@@ -1112,6 +1112,11 @@ function filterRiwayat() {
               <span>Rp ${Number(item.total || item.items.reduce((acc, i) => acc + i.price * i.quantity, 0)).toLocaleString()}</span>
             </div>
           </div>
+          <div class="mt-3 text-center">
+            <span class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-emerald-300">
+              <i class="fas fa-check-circle"></i> Pesanan Selesai
+            </span>
+          </div>
         </div>
       `;
     } else {
