@@ -22,10 +22,10 @@ const io = new Server(server, {
 app.use(express.json({ limit: "10mb" }));
 
 const stockCatalog = {
-  m01: { id: "m01", name: "Pure Matcha Latte", stock: 10 },
-  m02: { id: "m02", name: "Chocolate", stock: 10 },
-  m03: { id: "m03", name: "Espresso Roman", stock: 10 },
-  m04: { id: "m04", name: "French Fries", stock: 10 },
+  m01: { id: "m01", name: "Pure Matcha Latte", stock: 0 },
+  m02: { id: "m02", name: "Chocolate", stock: 0 },
+  m03: { id: "m03", name: "Espresso Roman", stock: 0 },
+  m04: { id: "m04", name: "French Fries", stock: 0 },
 };
 
 function getMenuPayload() {
