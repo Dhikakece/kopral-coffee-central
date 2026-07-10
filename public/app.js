@@ -1062,10 +1062,21 @@ function filterRiwayat() {
 
     let htmlContent = item.html || "";
 
-    // Tampilkan tombol bukti transfer hanya untuk role 'admin'
+    // Jika bukan admin, hilangkan semua referensi bukti transfer dan nama rekening dari HTML riwayat
     if (role !== "admin" && typeof htmlContent === "string") {
+      // Hapus tombol atau elemen yang berisi teks 'Bukti Transfer' (lebih fleksibel)
       htmlContent = htmlContent.replace(
-        /<button[^>]*>.*?LIHAT BUKTI TRANSFER.*?<\/button>/gi,
+        /<button[^>]*>[\s\S]*?BUKTI TRANSFER[\s\S]*?<\/button>/gi,
+        "",
+      );
+      // Hapus blok yang menampilkan nama rekening transfer
+      htmlContent = htmlContent.replace(
+        /<div[^>]*>[\s\S]*?Nama Rekening Transfer:[\s\S]*?<\/div>/gi,
+        "",
+      );
+      // Hapus elemen lain yang mungkin menyertakan label 'Nama Rekening' (fallback)
+      htmlContent = htmlContent.replace(
+        /<div[^>]*>[\s\S]*?Nama Rekening[\s\S]*?<\/div>/gi,
         "",
       );
     }
