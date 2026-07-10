@@ -294,7 +294,17 @@ async function startApp() {
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
     });
-    socket.on("connect", () => updateStatus(true));
+    socket.on("connect", () => {
+      updateStatus(true);
+      // Identifikasi role ke server agar bisa bergabung di room khusus
+      try {
+        const role = sessionStorage.getItem("kopral_role") || "admin";
+        socket.emit("identify", { role });
+        console.log("[Socket] Identified role to server:", role);
+      } catch (e) {
+        console.error("[Socket] Gagal mengirim identitas role:", e);
+      }
+    });
     socket.on("disconnect", () => updateStatus(false));
     socket.on("connect_error", () => updateStatus(false));
     socket.on("update-stok-realtime", (update) => {
@@ -312,6 +322,30 @@ async function startApp() {
         .getElementById("notif-sound")
         .play()
         .catch(() => {});
+    });
+    // Terima notifikasi bahwa pesanan telah selesai dan tambahkan ke riwayat (jika belum ada)
+    socket.on("notifikasi-pesanan-selesai", (pesanan) => {
+      try {
+        const riwayat = JSON.parse(
+          localStorage.getItem("kopral_riwayat_data") || "[]",
+        );
+        const exists = riwayat.some((r) => r.id_pesanan === pesanan.id_pesanan);
+        if (!exists) {
+          riwayat.unshift(pesanan);
+          localStorage.setItem("kopral_riwayat_data", JSON.stringify(riwayat));
+          console.log(
+            "[Riwayat] Menambahkan pesanan selesai dari server:",
+            pesanan.id_pesanan,
+          );
+        } else {
+          console.log(
+            "[Riwayat] Pesanan sudah tercatat, melewatkan:",
+            pesanan.id_pesanan,
+          );
+        }
+      } catch (e) {
+        console.error("[Riwayat] Error saat menerima pesanan selesai:", e);
+      }
     });
     document.getElementById("start-overlay").style.display = "none";
     // Tambahkan efek watermark ketika aplikasi dimulai
@@ -522,7 +556,7 @@ function prosesPesanan(id) {
   };
 }
 
-function selesaiPesanan(id) {
+async function selesaiPesanan(id) {
   const card = document.getElementById(id);
   if (card) {
     const cardClone = card.cloneNode(true);
@@ -620,11 +654,21 @@ function selesaiPesanan(id) {
     localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stockData));
     updateItemDropdown();
 
-    const riwayat = JSON.parse(
-      localStorage.getItem("kopral_riwayat_data") || "[]",
-    );
-    riwayat.unshift(dataPesanan);
-    localStorage.setItem("kopral_riwayat_data", JSON.stringify(riwayat));
+    // Kirim permintaan ke server agar riwayat tersimpan secara sentral (menghindari duplikat)
+    try {
+      const sourceRole = sessionStorage.getItem("kopral_role") || "admin";
+      dataPesanan.sourceRole = sourceRole;
+      fetch(`${window.location.origin}/api/pesanan-selesai`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataPesanan),
+      })
+        .then((r) => r.json())
+        .then((j) => console.log("[Riwayat] server response:", j))
+        .catch((e) => console.error("[Riwayat] Gagal kirim ke server:", e));
+    } catch (e) {
+      console.error("[Riwayat] Error saat mengirim pesanan selesai:", e);
+    }
     delete activeOrders[id];
     localStorage.setItem("kopral_active_orders", JSON.stringify(activeOrders));
     card.remove();
