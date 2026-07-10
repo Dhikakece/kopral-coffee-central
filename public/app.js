@@ -588,6 +588,27 @@ async function selesaiPesanan(id) {
   if (card) {
     const cardClone = card.cloneNode(true);
     cardClone.querySelector(".grid")?.remove();
+
+    // Jika ada bukti transfer dan user adalah admin, tambahkan tombol untuk melihat bukti
+    try {
+      const role = sessionStorage.getItem("kopral_role") || "admin";
+      const buktiUrl =
+        (cardClone.dataset && cardClone.dataset.bukti) ||
+        (pesanan && (pesanan.bukti_transfer || pesanan.buktiTransfer));
+      if (role === "admin" && buktiUrl) {
+        const btnBukti = Object.assign(document.createElement("button"), {
+          className:
+            "w-full mb-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2 rounded-xl transition block text-center",
+          innerHTML:
+            '<i class="fas fa-image mr-1"></i> TAMPILKAN BUKTI TRANSFER',
+        });
+        btnBukti.addEventListener("click", () => showBukti(buktiUrl));
+        cardClone.appendChild(btnBukti);
+      }
+    } catch (e) {
+      console.error("[UI] Error while adding bukti button:", e);
+    }
+
     cardClone.appendChild(
       Object.assign(document.createElement("div"), {
         className: "mt-4 pt-4 border-t border-slate-700/50 text-center",
