@@ -586,6 +586,8 @@ function prosesPesanan(id) {
 async function selesaiPesanan(id) {
   const card = document.getElementById(id);
   if (card) {
+    const pesanan = activeOrders[id] || {};
+    const items = pesanan.items || [];
     const cardClone = card.cloneNode(true);
     cardClone.querySelector(".grid")?.remove();
 
@@ -618,8 +620,6 @@ async function selesaiPesanan(id) {
                 </span>`,
       }),
     );
-    const pesanan = activeOrders[id] || {};
-    const items = pesanan.items || [];
     const dataPesanan = {
       id_pesanan: pesanan.id_pesanan || id,
       nama: pesanan.nama || "-",
