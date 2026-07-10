@@ -1024,7 +1024,8 @@ function filterRiwayat() {
 
     let htmlContent = item.html || "";
 
-    if (role === "dapur" && typeof htmlContent === "string") {
+    // Tampilkan tombol bukti transfer hanya untuk role 'admin'
+    if (role !== "admin" && typeof htmlContent === "string") {
       htmlContent = htmlContent.replace(
         /<button[^>]*>.*?LIHAT BUKTI TRANSFER.*?<\/button>/gi,
         "",
