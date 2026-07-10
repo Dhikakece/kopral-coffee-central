@@ -1069,12 +1069,49 @@ function filterRiwayat() {
         : "--:--";
       const metode =
         item.metode === "Dine-In" ? "Makan di Tempat" : "Bawa Pulang";
+      const isTransfer = item.pembayaran === "Transfer";
+      const paymentBadge = `
+        <div class="inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900 px-3 py-1 text-[10px] uppercase tracking-widest text-slate-300">
+          <i class="fas ${isTransfer ? "fa-credit-card" : "fa-money-bill"}"></i>
+          ${isTransfer ? "TRANSFER" : "CASH"}
+        </div>
+      `;
       div.innerHTML = `
-        <div class="flex flex-col gap-2">
-          <div class="text-sm text-slate-400">Jam Masuk: ${waktu}</div>
-          <div class="text-lg font-bold text-white">${item.nama || "-"}</div>
-          <div class="text-xs uppercase tracking-wide text-amber-300">Meja ${item.meja || "-"}</div>
-          <div class="text-sm text-slate-300">${metode}</div>
+        <div class="order-card-inner">
+          <div class="flex justify-between items-start mb-4">
+            <div class="flex items-start gap-4">
+              <div class="order-avatar bg-gradient-to-br from-amber-400 to-emerald-400">${item.meja || "-"}</div>
+              <div>
+                <h3 class="font-bold text-white text-lg">${item.nama || "-"}</h3>
+                <div class="mt-1 flex flex-wrap gap-2 items-center">
+                  <span class="pill bg-amber-500/10 text-amber-500 border border-amber-500/20">MEJA ${item.meja || "-"}</span>
+                  <span class="badge-order-type">${metode}</span>
+                </div>
+                <div class="mt-2 text-[12px] text-slate-400"><i class="fas fa-clock mr-1"></i> Jam Masuk: ${waktu}</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="text-slate-400 text-sm">#${item.id_pesanan || "-"}</div>
+              <div class="mt-2">${paymentBadge}</div>
+            </div>
+          </div>
+          <div class="order-items rounded-2xl p-4 mb-4">
+            ${item.items
+              .map(
+                (i) => `
+                  <div class="order-item">
+                    <div class="name text-slate-300 text-sm">${i.quantity}x ${i.name}</div>
+                    <div class="price">Rp ${Number(i.price).toLocaleString()}</div>
+                    ${i.note ? `<div class="w-full text-[11px] text-amber-400 italic mt-2">• ${i.note}</div>` : ""}
+                  </div>
+                `,
+              )
+              .join("")}
+            <div class="order-total border-t border-slate-700/50 mt-2 pt-2 text-white flex justify-between">
+              <span>TOTAL</span>
+              <span>Rp ${Number(item.total || item.items.reduce((acc, i) => acc + i.price * i.quantity, 0)).toLocaleString()}</span>
+            </div>
+          </div>
         </div>
       `;
     } else {
