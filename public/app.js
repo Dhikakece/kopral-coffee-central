@@ -566,7 +566,13 @@ function selesaiPesanan(id) {
 
     const doEmit = shouldEmitUpdate(role, pembayaran);
 
-    if (doEmit) {
+    // Jika server sudah mengurangi stok pada saat pesanan masuk, jangan kurangi lagi.
+    if (pesanan.stocksDeducted) {
+      console.log(
+        "[Stock] Server sudah mengurangi stok saat pesanan masuk; melewatkan emit pada SELESAI.",
+        pesanan.id_pesanan,
+      );
+    } else if (doEmit) {
       // Lakukan pengurangan stok lokal lalu beri tahu server dengan nilai stok absolut
       items.forEach((item) => {
         const stokItem = Object.values(stockData).find(
