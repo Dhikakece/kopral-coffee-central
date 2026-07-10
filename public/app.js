@@ -1060,48 +1060,68 @@ function filterRiwayat() {
     const div = document.createElement("div");
     div.className = "bg-slate-900 p-4 rounded-xl border border-slate-700 mb-3";
 
-    let htmlContent = item.html || "";
+    if (role === "dapur") {
+      const waktu = item.timestamp
+        ? new Date(item.timestamp).toLocaleTimeString("id-ID", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "--:--";
+      const metode =
+        item.metode === "Dine-In" ? "Makan di Tempat" : "Bawa Pulang";
+      div.innerHTML = `
+        <div class="flex flex-col gap-2">
+          <div class="text-sm text-slate-400">Jam Masuk: ${waktu}</div>
+          <div class="text-lg font-bold text-white">${item.nama || "-"}</div>
+          <div class="text-xs uppercase tracking-wide text-amber-300">Meja ${item.meja || "-"}</div>
+          <div class="text-sm text-slate-300">${metode}</div>
+        </div>
+      `;
+    } else {
+      let htmlContent = item.html || "";
 
-    // Jika bukan admin, hilangkan semua referensi bukti transfer dan nama rekening dari HTML riwayat
-    if (role !== "admin" && typeof htmlContent === "string") {
-      // Hapus tombol atau elemen yang berisi teks 'Bukti Transfer' (lebih fleksibel)
-      htmlContent = htmlContent.replace(
-        /<button[^>]*>[\s\S]*?BUKTI TRANSFER[\s\S]*?<\/button>/gi,
-        "",
-      );
-      // Hapus blok yang menampilkan nama rekening transfer
-      htmlContent = htmlContent.replace(
-        /<div[^>]*>[\s\S]*?Nama Rekening Transfer:[\s\S]*?<\/div>/gi,
-        "",
-      );
-      // Hapus elemen lain yang mungkin menyertakan label 'Nama Rekening' (fallback)
-      htmlContent = htmlContent.replace(
-        /<div[^>]*>[\s\S]*?Nama Rekening[\s\S]*?<\/div>/gi,
-        "",
-      );
-    }
-
-    div.innerHTML = htmlContent;
-    // Jika ada tombol bukti dalam HTML (riwayat admin), pasang listener agar tombol membuka modal
-    try {
-      if (role === "admin") {
-        const buttons = div.querySelectorAll("button");
-        buttons.forEach((b) => {
-          const txt = (b.textContent || "").toLowerCase();
-          if (txt.includes("bukti transfer") || b.dataset.bukti) {
-            const url =
-              b.getAttribute("data-bukti") ||
-              item.bukti_transfer ||
-              item.buktiTransfer;
-            if (url) {
-              b.addEventListener("click", () => showBukti(url));
-            }
-          }
-        });
+      // Jika bukan admin, hilangkan semua referensi bukti transfer dan nama rekening dari HTML riwayat
+      if (role !== "admin" && typeof htmlContent === "string") {
+        // Hapus tombol atau elemen yang berisi teks 'Bukti Transfer' (lebih fleksibel)
+        htmlContent = htmlContent.replace(
+          /<button[^>]*>[\s\S]*?BUKTI TRANSFER[\s\S]*?<\/button>/gi,
+          "",
+        );
+        // Hapus blok yang menampilkan nama rekening transfer
+        htmlContent = htmlContent.replace(
+          /<div[^>]*>[\s\S]*?Nama Rekening Transfer:[\s\S]*?<\/div>/gi,
+          "",
+        );
+        // Hapus elemen lain yang mungkin menyertakan label 'Nama Rekening' (fallback)
+        htmlContent = htmlContent.replace(
+          /<div[^>]*>[\s\S]*?Nama Rekening[\s\S]*?<\/div>/gi,
+          "",
+        );
       }
-    } catch (e) {
-      console.error("[Riwayat] Error attaching bukti listeners:", e);
+
+      div.innerHTML = htmlContent;
+      // Jika ada tombol bukti dalam HTML (riwayat admin), pasang listener agar tombol membuka modal
+      try {
+        if (role === "admin") {
+          const buttons = div.querySelectorAll("button");
+          buttons.forEach((b) => {
+            const txt = (b.textContent || "").toLowerCase();
+            if (txt.includes("bukti transfer") || b.dataset.bukti) {
+              const url =
+                b.getAttribute("data-bukti") ||
+                item.bukti_transfer ||
+                item.buktiTransfer;
+              if (url) {
+                b.addEventListener("click", () => showBukti(url));
+              }
+            }
+          });
+        }
+      } catch (e) {
+        console.error("[Riwayat] Error attaching bukti listeners:", e);
+      }
     }
+
     container.appendChild(div);
   });
 }
