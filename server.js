@@ -90,6 +90,7 @@ app.use((req, res, next) => {
 
 const DATA_PATH = path.join(__dirname, "data", "stock.json");
 const RIWAYAT_PATH = path.join(__dirname, "data", "riwayat.json");
+const PAYMENTS_PATH = path.join(__dirname, "data", "payments.json");
 
 const defaultStockCatalog = {
   c01: { id: "c01", name: "Espresso Roman", stock: 0, category: "coffee" },
@@ -184,6 +185,30 @@ function saveRiwayat(riwayat, role) {
   }
 }
 
+function loadPayments() {
+  try {
+    if (!fs.existsSync(PAYMENTS_PATH)) {
+      fs.writeFileSync(PAYMENTS_PATH, JSON.stringify({}, null, 2));
+      return {};
+    }
+    const file = fs.readFileSync(PAYMENTS_PATH, "utf8");
+    return JSON.parse(file || "{}");
+  } catch (e) {
+    console.error("[Server] Gagal membaca payments:", e);
+    return {};
+  }
+}
+
+function savePayments(payments) {
+  try {
+    fs.writeFileSync(PAYMENTS_PATH, JSON.stringify(payments, null, 2));
+  } catch (e) {
+    console.error("[Server] Gagal menyimpan payments:", e);
+  }
+}
+
+let payments = loadPayments();
+
 function findProductByName(name) {
   if (!name) return null;
   const lower = String(name).trim().toLowerCase();
@@ -268,9 +293,40 @@ app.post("/api/pesanan-masuk", (req, res) => {
     }
   }
 
+  // Simpan bukti transfer jika dikirim oleh pelanggan (agar hanya admin yang dapat melihatnya nanti)
+  try {
+    const proof = dataPesanan.bukti_transfer || dataPesanan.buktiTransfer;
+    if (proof && dataPesanan.id_pesanan) {
+      payments[dataPesanan.id_pesanan] = proof;
+      savePayments(payments);
+      console.log(
+        "[Payments] Stored bukti transfer for:",
+        dataPesanan.id_pesanan,
+      );
+    }
+  } catch (e) {
+    console.error("[Payments] Error storing bukti transfer:", e);
+  }
+
   // Kirim data pesanan secara REAL-TIME ke dashboard kasir / aplikasi Android
   const stocksDeducted = updatedStocks.length > 0;
-  io.emit("notifikasi-pesanan-baru", { ...dataPesanan, stocksDeducted });
+  // Untuk admin: sertakan bukti_transfer jika ada
+  const adminPayload = { ...dataPesanan, stocksDeducted };
+
+  // Untuk umum: kirim versi yang disanitasi tanpa bukti_transfer
+  const sanitized = { ...dataPesanan };
+  delete sanitized.bukti_transfer;
+  delete sanitized.buktiTransfer;
+
+  // Emit sanitized ke semua klien
+  io.emit("notifikasi-pesanan-baru", { ...sanitized, stocksDeducted });
+  // Emit lengkap ke admin room (jika ada bukti)
+  try {
+    const adminRoom = "admin";
+    io.to(adminRoom).emit("notifikasi-pesanan-baru", adminPayload);
+  } catch (e) {
+    console.error("[Socket] Gagal emit notifikasi-pesanan-baru ke admin:", e);
+  }
 
   // Kirim respon balik sukses ke website pelanggan
   res.status(200).json({
@@ -345,6 +401,16 @@ app.post("/api/pesanan-selesai", (req, res) => {
       });
     }
 
+    // Jika ada bukti transfer tersimpan untuk pesanan ini, lampirkan ke entri riwayat (hanya untuk role admin)
+    try {
+      const storedProof = payments[dataPesanan.id_pesanan];
+      if (storedProof && sourceRole === "admin") {
+        dataPesanan.bukti_transfer = storedProof;
+      }
+    } catch (e) {
+      console.error("[Payments] Error while attaching proof:", e);
+    }
+
     dataPesanan.timestamp = dataPesanan.timestamp || new Date().getTime();
     dataPesanan.tanggal =
       dataPesanan.tanggal || new Date().toISOString().split("T")[0];
@@ -360,6 +426,20 @@ app.post("/api/pesanan-selesai", (req, res) => {
       .json({ success: true, message: "Tercatat.", added: true });
   } catch (e) {
     console.error("[Server] Error /api/pesanan-selesai:", e);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+});
+
+// Ambil riwayat untuk role tertentu
+app.get("/api/riwayat", (req, res) => {
+  try {
+    const role = String(req.query.role || "global").trim() || "global";
+    const riwayat = loadRiwayat(role);
+    return res.status(200).json({ success: true, role, riwayat });
+  } catch (e) {
+    console.error("[Server] Error /api/riwayat:", e);
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });
