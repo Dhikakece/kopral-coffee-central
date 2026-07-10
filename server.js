@@ -21,6 +21,19 @@ const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log("[Socket] Client connected:", socket.id);
 
+  // Klien dapat mengirimkan identitas role untuk bergabung pada room khusus
+  socket.on("identify", (payload) => {
+    try {
+      const role = String(payload && payload.role ? payload.role : "").trim();
+      if (!role) return;
+      const safe = role.replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
+      socket.join(safe);
+      console.log(`[Socket] ${socket.id} joined room: ${safe}`);
+    } catch (e) {
+      console.error("[Socket] Error on identify:", e);
+    }
+  });
+
   // Terima update stok dari dashboard kasir (atau admin) lalu broadcast ke semua klien
   socket.on("update-stok-realtime", (payload) => {
     try {
@@ -76,6 +89,7 @@ app.use((req, res, next) => {
 });
 
 const DATA_PATH = path.join(__dirname, "data", "stock.json");
+const RIWAYAT_PATH = path.join(__dirname, "data", "riwayat.json");
 
 const defaultStockCatalog = {
   c01: { id: "c01", name: "Espresso Roman", stock: 0, category: "coffee" },
@@ -136,6 +150,37 @@ function saveStockCatalog() {
     fs.writeFileSync(DATA_PATH, JSON.stringify(stockCatalog, null, 2));
   } catch (e) {
     console.error("[Server] Gagal menyimpan data stok:", e);
+  }
+}
+
+function riwayatFileForRole(role) {
+  const safe = String(role || "global")
+    .replace(/[^a-z0-9_-]/gi, "_")
+    .toLowerCase();
+  return path.join(__dirname, "data", `riwayat_${safe}.json`);
+}
+
+function loadRiwayat(role) {
+  try {
+    const filePath = riwayatFileForRole(role);
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify([], null, 2));
+      return [];
+    }
+    const file = fs.readFileSync(filePath, "utf8");
+    return JSON.parse(file || "[]");
+  } catch (e) {
+    console.error("[Server] Gagal membaca riwayat:", e);
+    return [];
+  }
+}
+
+function saveRiwayat(riwayat, role) {
+  try {
+    const filePath = riwayatFileForRole(role);
+    fs.writeFileSync(filePath, JSON.stringify(riwayat, null, 2));
+  } catch (e) {
+    console.error("[Server] Gagal menyimpan riwayat:", e);
   }
 }
 
@@ -273,6 +318,52 @@ app.post("/update-stok", (req, res) => {
   res
     .status(200)
     .json({ success: true, message: "Stok berhasil disinkronkan." });
+});
+
+// Endpoint untuk menandai pesanan selesai secara sentral dan menyimpan riwayat
+app.post("/api/pesanan-selesai", (req, res) => {
+  try {
+    const dataPesanan = req.body || {};
+    if (!dataPesanan.id_pesanan) {
+      return res
+        .status(400)
+        .json({ success: false, message: "id_pesanan wajib disertakan." });
+    }
+
+    const sourceRole = String(dataPesanan.sourceRole || "").trim() || "global";
+
+    const riwayat = loadRiwayat(sourceRole);
+    const exists = riwayat.some((r) => r.id_pesanan === dataPesanan.id_pesanan);
+    if (exists) {
+      // Sudah tercatat, kirim broadcast hanya ke room role untuk sinkron
+      const room = sourceRole.replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
+      io.to(room).emit("notifikasi-pesanan-selesai", dataPesanan);
+      return res.status(200).json({
+        success: true,
+        message: "Sudah tercatat sebelumnya.",
+        added: false,
+      });
+    }
+
+    dataPesanan.timestamp = dataPesanan.timestamp || new Date().getTime();
+    dataPesanan.tanggal =
+      dataPesanan.tanggal || new Date().toISOString().split("T")[0];
+    riwayat.unshift(dataPesanan);
+    saveRiwayat(riwayat, sourceRole);
+
+    // Broadcast ke klien dengan role yang sama saja
+    const room = sourceRole.replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
+    io.to(room).emit("notifikasi-pesanan-selesai", dataPesanan);
+
+    return res
+      .status(200)
+      .json({ success: true, message: "Tercatat.", added: true });
+  } catch (e) {
+    console.error("[Server] Error /api/pesanan-selesai:", e);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
 });
 
 // Jalankan server (Render otomatis menentukan port, jika tidak ada gunakan 3000)
