@@ -1,0 +1,5 @@
+.env
+node_modules/
+.vscode/
+android/
+www/data/firebase-service-account.json

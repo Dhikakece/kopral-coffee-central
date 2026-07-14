@@ -2,12 +2,18 @@
   "name": "kopral-coffee-kasir-server",
   "version": "1.0.0",
   "description": "Server Backend dan Monitor Kasir Real-time Cloud",
-  "main": "server.js",
+  "main": "www/server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node www/server.js"
   },
   "dependencies": {
+    "@capacitor/android": "^8.4.1",
+    "@capacitor/cli": "^8.4.1",
+    "@capacitor/core": "^8.4.1",
+    "@capacitor/push-notifications": "^8.1.1",
     "express": "^4.19.2",
-    "socket.io": "^4.7.5"
+    "firebase-admin": "^14.1.0",
+    "socket.io": "^4.7.5",
+    "web-push": "^3.5.0"
   }
 }
