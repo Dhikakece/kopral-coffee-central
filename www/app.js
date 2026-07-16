@@ -1330,6 +1330,26 @@ function renderRiwayatEntries(
   });
 }
 
+function updateTotalOmzetSummary(riwayatList, role) {
+  const card = document.getElementById("total-omzet-container");
+  const value = document.getElementById("total-omzet-value");
+  if (!card || !value) return;
+
+  if (role === "dapur") {
+    card.classList.add("hidden");
+    return;
+  }
+
+  const filtered = Array.isArray(riwayatList) ? riwayatList : [];
+  const totalOmzet = filtered.reduce(
+    (acc, r) => acc + r.items.reduce((sub, i) => sub + i.price * i.quantity, 0),
+    0,
+  );
+
+  value.textContent = `Rp ${totalOmzet.toLocaleString()}`;
+  card.classList.remove("hidden");
+}
+
 function filterRiwayat() {
   const role = sessionStorage.getItem("kopral_role");
   const tanggal = document.getElementById("input-tanggal").value;
@@ -1342,7 +1362,9 @@ function filterRiwayat() {
     ? riwayat.filter((i) => i.tanggal === tanggal)
     : riwayat;
 
-  renderRiwayatEntries(container, filtered, role, true, false);
+  container.innerHTML = "";
+  updateTotalOmzetSummary(filtered, role);
+  renderRiwayatEntries(container, filtered, role, false, false);
 }
 
 function toggleRiwayatPopup(show) {
