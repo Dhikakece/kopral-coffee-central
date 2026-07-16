@@ -701,6 +701,20 @@
         border-radius: 1.25rem;
       }
 
+      #total-omzet-container,
+      #total-omzet-container p,
+      #total-omzet-container h3 {
+        border: none !important;
+        border-bottom: none !important;
+        border-top: none !important;
+        border-left: none !important;
+        border-right: none !important;
+        box-shadow: none !important;
+        text-decoration: none !important;
+        background: transparent !important;
+        padding: 0 !important;
+      }
+
       #total-omzet-container {
         margin-top: 0.8rem;
         margin-bottom: 0.25rem;
@@ -844,7 +858,7 @@
         #total-omzet-container {
           margin-top: 0.15rem;
           margin-bottom: 0.2rem;
-          padding: 0.9rem 1rem;
+          padding: 0 !important;
         }
 
         #container-riwayat {
@@ -1317,15 +1331,38 @@
               </div>
 
               <!-- Total Omzet -->
-              <div id="total-omzet-container" class="hidden mt-2 text-left">
+              <div
+                id="total-omzet-container"
+                class="hidden mt-2 text-left"
+                style="
+                  border: none !important;
+                  box-shadow: none !important;
+                  background: transparent !important;
+                  padding: 0 !important;
+                "
+              >
                 <p
                   class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500"
+                  style="
+                    border: none !important;
+                    box-shadow: none !important;
+                    background: transparent !important;
+                    padding: 0 !important;
+                    text-decoration: none !important;
+                  "
                 >
                   Total Omzet
                 </p>
                 <h3
                   id="total-omzet-value"
                   class="text-white font-semibold text-sm mt-0.5"
+                  style="
+                    border: none !important;
+                    box-shadow: none !important;
+                    background: transparent !important;
+                    padding: 0 !important;
+                    text-decoration: none !important;
+                  "
                 >
                   Rp 0
                 </h3>
