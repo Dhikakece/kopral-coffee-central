@@ -4,6 +4,102 @@ let activeOrders = JSON.parse(
   localStorage.getItem("kopral_active_orders") || "{}",
 );
 let warningShown = false;
+let appStarted = false;
+
+function loadPersistedOrders() {
+  try {
+    const saved = localStorage.getItem("kopral_active_orders");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === "object") {
+        activeOrders = parsed;
+      }
+    }
+  } catch (e) {
+    console.warn("Gagal memuat antrean tersimpan:", e);
+  }
+}
+
+function restoreAuthState() {
+  try {
+    const loginSaved = localStorage.getItem("kopral_logged_in") === "true";
+    const storedRole =
+      sessionStorage.getItem("kopral_role") ||
+      localStorage.getItem("kopral_role") ||
+      "";
+    if (storedRole) {
+      sessionStorage.setItem("kopral_role", storedRole);
+      localStorage.setItem("kopral_role", storedRole);
+    }
+    return { loginSaved, storedRole };
+  } catch (e) {
+    console.warn("Gagal memuat state auth:", e);
+    return { loginSaved: false, storedRole: "" };
+  }
+}
+
+function showStartScreen() {
+  const loginContainer = document.getElementById("login-form-container");
+  const startOverlay = document.getElementById("start-overlay");
+
+  if (loginContainer) {
+    loginContainer.classList.add("hidden");
+    loginContainer.style.display = "none";
+    loginContainer.style.opacity = "0";
+  }
+
+  if (startOverlay) {
+    startOverlay.classList.remove("hidden");
+    startOverlay.style.display = "flex";
+  }
+}
+
+function showLoginForm() {
+  const loginContainer = document.getElementById("login-form-container");
+  const startOverlay = document.getElementById("start-overlay");
+
+  if (startOverlay) {
+    startOverlay.classList.add("hidden");
+    startOverlay.style.display = "none";
+  }
+
+  if (loginContainer) {
+    loginContainer.classList.remove("hidden");
+    loginContainer.style.display = "flex";
+    loginContainer.style.opacity = "1";
+  }
+}
+
+function setAuthOverlayState(showLogin) {
+  if (showLogin) {
+    showLoginForm();
+    return;
+  }
+
+  const loginContainer = document.getElementById("login-form-container");
+  const startOverlay = document.getElementById("start-overlay");
+
+  if (loginContainer) {
+    loginContainer.classList.add("hidden");
+    loginContainer.style.display = "none";
+    loginContainer.style.opacity = "0";
+  }
+
+  if (startOverlay) {
+    startOverlay.classList.add("hidden");
+    startOverlay.style.display = "none";
+  }
+}
+
+function persistAuthState(role) {
+  try {
+    sessionStorage.setItem("kopral_role", role);
+    localStorage.setItem("kopral_role", role);
+    localStorage.setItem("kopral_logged_in", "true");
+  } catch (e) {
+    console.warn("Gagal menyimpan state auth:", e);
+  }
+}
 
 const STOCK_STORAGE_KEY = "kopral_stock_state";
 const defaultStockData = {
@@ -178,6 +274,7 @@ function initializeApp() {
     console.warn("Gagal memuat tema:", e);
   }
 
+  loadPersistedOrders();
   updateItemDropdown();
   renderActiveOrders();
   setInterval(checkClosingTime, 30000);
@@ -186,21 +283,22 @@ function initializeApp() {
   window.addEventListener("online", () => setStatusOnline(true));
   window.addEventListener("offline", () => setStatusOnline(false));
 
-  const loginSaved = localStorage.getItem("kopral_logged_in");
-  if (loginSaved === "true") {
-    const loginContainer = document.getElementById("login-form-container");
-    if (loginContainer) {
-      loginContainer.classList.add("hidden");
-    }
-    const startOverlay = document.getElementById("start-overlay");
-    if (startOverlay) {
-      startOverlay.classList.add("hidden");
-    }
-    startApp();
+  const { storedRole } = restoreAuthState();
+  if (storedRole) {
+    sessionStorage.setItem("kopral_role", storedRole);
+    localStorage.setItem("kopral_role", storedRole);
   }
+
+  showStartScreen();
+  loadPersistedOrders();
+  renderActiveOrders();
 }
 
-window.addEventListener("DOMContentLoaded", initializeApp);
+if (document.readyState === "loading") {
+  window.addEventListener("DOMContentLoaded", initializeApp);
+} else {
+  initializeApp();
+}
 
 function setStatusOnline(isOnline) {
   const dot = document.getElementById("dot-status");
@@ -217,43 +315,39 @@ function setStatusOnline(isOnline) {
 
 // LOGIKA LOGIN DENGAN AKSES TERPISAH
 function prosesLogin() {
-  const user = document.getElementById("input-username").value;
+  const user = document
+    .getElementById("input-username")
+    .value.trim()
+    .toLowerCase();
   const pass = document.getElementById("input-password").value;
   const errUser = document.getElementById("error-user");
   const errPass = document.getElementById("error-pass");
 
-  // Reset error
   errUser.classList.add("hidden");
   errPass.classList.add("hidden");
 
-  // Definisi Kredensial
   const kredensial = {
     admin: { pass: "admin123", role: "admin" },
     dapur: { pass: "dapur123", role: "dapur" },
   };
 
-  if (kredensial[user] && kredensial[user].pass === pass) {
-    // Login Berhasil
-    const container = document.getElementById("login-form-container");
-    container.style.opacity = "0";
+  const selected = kredensial[user];
+  if (selected && selected.pass === pass) {
+    const role = selected.role;
+    persistAuthState(role);
+    loadPersistedOrders();
+    renderActiveOrders();
+    setAuthOverlayState(false);
 
-    // Simpan role ke session agar bisa dipakai untuk membatasi fitur
-    sessionStorage.setItem("kopral_role", kredensial[user].role);
-    localStorage.setItem("kopral_logged_in", "true");
-
-    setTimeout(() => {
-      container.style.display = "none";
+    if (!appStarted) {
       startApp();
+    }
 
-      // Opsional: Sembunyikan fitur tertentu jika yang login adalah Dapur
-      if (kredensial[user].role === "dapur") {
-        console.log("Mode Dapur Aktif: Fitur Admin disembunyikan");
-        // Contoh: document.querySelector('.tombol-admin').style.display = 'none';
-      }
-    }, 500);
+    if (role === "dapur") {
+      console.log("Mode Dapur Aktif: Fitur Admin disembunyikan");
+    }
   } else {
-    // Login Gagal
-    if (!kredensial[user]) {
+    if (!selected) {
       errUser.innerText = "* USERNAME TIDAK DITEMUKAN";
       errUser.classList.remove("hidden", "opacity-0");
     } else {
@@ -319,10 +413,27 @@ function renderActiveOrders() {
 
 async function startApp() {
   try {
+    if (typeof io === "undefined") {
+      alert(
+        "Error: Socket.io tidak terpanggil. Periksa koneksi internet Anda.",
+      );
+      return;
+    }
+
+    const role =
+      sessionStorage.getItem("kopral_role") ||
+      localStorage.getItem("kopral_role") ||
+      "admin";
+    sessionStorage.setItem("kopral_role", role);
+    localStorage.setItem("kopral_role", role);
+
     const audio = document.getElementById("notif-sound");
     await audio.play().catch(() => {});
     audio.pause();
-    const serverBase = window.location.origin;
+    const serverBase =
+      typeof KOPRAL_BACKEND !== "undefined"
+        ? KOPRAL_BACKEND
+        : window.location.origin;
     socket = io(serverBase, {
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -332,14 +443,21 @@ async function startApp() {
       updateStatus(true);
       // Identifikasi role ke server agar bisa bergabung di room khusus
       try {
-        const role = sessionStorage.getItem("kopral_role") || "admin";
+        const role =
+          sessionStorage.getItem("kopral_role") ||
+          localStorage.getItem("kopral_role") ||
+          "admin";
+        sessionStorage.setItem("kopral_role", role);
+        localStorage.setItem("kopral_role", role);
         socket.emit("identify", { role });
         console.log("[Socket] Identified role to server:", role);
 
         // Ambil riwayat dari server untuk role ini (agar bukti transfer hanya terlihat oleh admin)
-        fetch(
-          `${window.location.origin}/api/riwayat?role=${encodeURIComponent(role)}`,
-        )
+        const backend =
+          typeof KOPRAL_BACKEND !== "undefined"
+            ? KOPRAL_BACKEND
+            : window.location.origin;
+        fetch(`${backend}/api/riwayat?role=${encodeURIComponent(role)}`)
           .then((r) => r.json())
           .then((j) => {
             if (j && j.success && Array.isArray(j.riwayat)) {
@@ -408,7 +526,11 @@ async function startApp() {
         console.error("[Riwayat] Error saat menerima pesanan selesai:", e);
       }
     });
-    document.getElementById("start-overlay").style.display = "none";
+    const startOverlay = document.getElementById("start-overlay");
+    if (startOverlay) {
+      startOverlay.classList.add("hidden");
+      startOverlay.style.display = "none";
+    }
     // Tambahkan efek watermark ketika aplikasi dimulai
     const watermark = document.querySelector(".logo-watermark");
     if (watermark) {
@@ -757,7 +879,11 @@ async function selesaiPesanan(id) {
     try {
       const sourceRole = sessionStorage.getItem("kopral_role") || "admin";
       dataPesanan.sourceRole = sourceRole;
-      fetch(`${window.location.origin}/api/pesanan-selesai`, {
+      const backend =
+        typeof KOPRAL_BACKEND !== "undefined"
+          ? KOPRAL_BACKEND
+          : window.location.origin;
+      fetch(`${backend}/api/pesanan-selesai`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataPesanan),
@@ -1285,7 +1411,11 @@ async function prosesStok() {
   }
 
   try {
-    const response = await fetch("/update-stok", {
+    const backend =
+      typeof KOPRAL_BACKEND !== "undefined"
+        ? KOPRAL_BACKEND
+        : window.location.origin;
+    const response = await fetch(`${backend}/update-stok`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
