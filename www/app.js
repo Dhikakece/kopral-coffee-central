@@ -1420,14 +1420,27 @@ function hapusRiwayatManual() {
 function toggleModal(show) {
   const modal = document.getElementById("modal");
   const adminActions = document.getElementById("admin-actions");
+  const btnCetak = document.getElementById("btn-cetak-pdf");
+  const btnExport = document.getElementById("btn-export-csv");
+  const btnRiwayat = document.getElementById("btn-riwayat-pesanan");
+  const btnHapus = document.getElementById("btn-hapus-riwayat");
   const role = sessionStorage.getItem("kopral_role");
 
   if (show) {
     modal.classList.remove("hidden");
-    if (role === "dapur") {
-      adminActions.style.display = "none";
-    } else {
+    if (adminActions) {
       adminActions.style.display = "grid";
+    }
+    if (role === "dapur") {
+      if (btnCetak) btnCetak.classList.add("hidden");
+      if (btnExport) btnExport.classList.add("hidden");
+      if (btnHapus) btnHapus.classList.add("hidden");
+      if (btnRiwayat) btnRiwayat.classList.remove("hidden");
+    } else {
+      if (btnCetak) btnCetak.classList.remove("hidden");
+      if (btnExport) btnExport.classList.remove("hidden");
+      if (btnHapus) btnHapus.classList.remove("hidden");
+      if (btnRiwayat) btnRiwayat.classList.remove("hidden");
     }
     document.getElementById("input-tanggal").value = new Date()
       .toISOString()
