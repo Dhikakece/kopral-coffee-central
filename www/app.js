@@ -1214,11 +1214,6 @@ function renderRiwayatEntries(
   }
 
   if (!showEntries) {
-    if (role === "dapur") {
-      container.innerHTML += `<div class="text-center text-slate-400 text-[11px] py-3">Gunakan tombol Riwayat Pesanan untuk melihat daftar lengkap.</div>`;
-    } else {
-      container.innerHTML += `<div class="text-center text-slate-400 text-[11px] mt-2">Buka tombol Riwayat Pesanan untuk melihat daftar lengkap.</div>`;
-    }
     return;
   }
 
