@@ -134,15 +134,15 @@ const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
 
 if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
   console.warn(
-    "[VAPID] VAPID keys not found in environment variables. Web-push may fail.",
+    "[VAPID] VAPID keys not found in environment variables. Web-push disabled for now.",
+  );
+} else {
+  webpush.setVapidDetails(
+    "mailto:admin@kopral.coffee",
+    VAPID_PUBLIC_KEY,
+    VAPID_PRIVATE_KEY,
   );
 }
-
-webpush.setVapidDetails(
-  "mailto:admin@kopral.coffee",
-  VAPID_PUBLIC_KEY,
-  VAPID_PRIVATE_KEY,
-);
 
 const defaultStockCatalog = {
   c01: { id: "c01", name: "Espresso Roman", stock: 0, category: "coffee" },
@@ -407,10 +407,21 @@ app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, "public")));
 
 // Menyediakan file statis (Website Pelanggan) dari folder 'KOPRAL Coffee Central'
-app.use(
-  "/pelanggan",
-  express.static(path.join(__dirname, "../KOPRAL Coffee Central")),
-);
+const customerSiteCandidates = [
+  path.resolve(__dirname, "..", "..", "KOPRAL Coffee Central"),
+  path.resolve(__dirname, "..", "KOPRAL Coffee Central"),
+  path.resolve(__dirname, "../KOPRAL Coffee Central"),
+];
+const customerSitePath =
+  customerSiteCandidates.find((candidate) => fs.existsSync(candidate)) ||
+  customerSiteCandidates[0];
+
+if (fs.existsSync(customerSitePath)) {
+  console.log(`[Static] Pelanggan site served from: ${customerSitePath}`);
+  app.use("/pelanggan", express.static(customerSitePath));
+} else {
+  console.warn(`[Static] Pelanggan site folder not found: ${customerSitePath}`);
+}
 
 app.get("/vapidPublicKey", (req, res) => {
   res.status(200).json({ publicKey: VAPID_PUBLIC_KEY });
