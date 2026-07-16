@@ -1191,7 +1191,13 @@ function downloadCSV() {
   a.click();
 }
 
-function renderRiwayatEntries(container, riwayatList, role, showTotal = true) {
+function renderRiwayatEntries(
+  container,
+  riwayatList,
+  role,
+  showTotal = true,
+  showEntries = true,
+) {
   container.innerHTML = "";
   const filtered = Array.isArray(riwayatList) ? riwayatList : [];
 
@@ -1205,6 +1211,15 @@ function renderRiwayatEntries(container, riwayatList, role, showTotal = true) {
             <p class="text-amber-500 text-[10px] font-bold uppercase">Total Omzet</p>
             <h3 class="text-white font-black text-xl">Rp ${totalOmzet.toLocaleString()}</h3>
         </div>`;
+  }
+
+  if (!showEntries) {
+    if (role === "dapur") {
+      container.innerHTML += `<div class="text-center text-slate-400 text-[11px] py-3">Gunakan tombol Riwayat Pesanan untuk melihat daftar lengkap.</div>`;
+    } else {
+      container.innerHTML += `<div class="text-center text-slate-400 text-[11px] mt-2">Buka tombol Riwayat Pesanan untuk melihat daftar lengkap.</div>`;
+    }
+    return;
   }
 
   filtered.forEach((item) => {
@@ -1332,7 +1347,7 @@ function filterRiwayat() {
     ? riwayat.filter((i) => i.tanggal === tanggal)
     : riwayat;
 
-  renderRiwayatEntries(container, filtered, role, true);
+  renderRiwayatEntries(container, filtered, role, true, false);
 }
 
 function toggleRiwayatPopup(show) {
@@ -1347,7 +1362,7 @@ function toggleRiwayatPopup(show) {
     const riwayat = JSON.parse(
       localStorage.getItem("kopral_riwayat_data") || "[]",
     );
-    renderRiwayatEntries(content, riwayat, role, false);
+    renderRiwayatEntries(content, riwayat, role, false, true);
   } else {
     popup.classList.add("hidden");
     popup.classList.remove("flex");
