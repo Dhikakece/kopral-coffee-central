@@ -658,7 +658,8 @@
         width: min(100%, 980px);
         max-width: min(96vw, 980px);
         max-height: min(94dvh, 860px);
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
         display: flex;
         flex-direction: column;
         padding: 1rem;
@@ -676,7 +677,7 @@
         align-items: start;
         min-height: 0;
         flex: 1 1 auto;
-        overflow: hidden;
+        overflow: visible;
       }
 
       #modal .lg\:col-span-1,
@@ -687,10 +688,9 @@
 
       #modal #container-riwayat {
         width: 100%;
-        min-height: 220px;
-        max-height: min(54dvh, 420px);
-        overflow-y: auto;
-        overflow-x: hidden;
+        min-height: 140px;
+        max-height: none;
+        overflow: visible;
         padding: 0.85rem;
         border-radius: 1.25rem;
       }
@@ -703,6 +703,17 @@
           max-height: min(96dvh, 860px);
           padding: 0.9rem;
           border-radius: 1.5rem;
+        }
+
+        #admin-actions {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 0.5rem;
+        }
+
+        #admin-actions > button {
+          min-height: 44px;
+          white-space: normal;
+          line-height: 1.2;
         }
 
         #modal .relative > .flex.justify-between.items-start.gap-4.mb-6 {
@@ -968,8 +979,12 @@
           padding: 0.5rem;
         }
 
+        #admin-actions {
+          grid-template-columns: 1fr;
+        }
+
         #container-riwayat {
-          max-height: 250px;
+          max-height: none;
           font-size: 0.7rem;
         }
 
