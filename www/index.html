@@ -17,9 +17,9 @@
       content="black-translucent"
     />
     <meta name="apple-mobile-web-app-title" content="KOPRAL POS" />
-    <link rel="manifest" href="manifest.json" />
-    <link rel="icon" type="image/png" href="assets/logo.png" />
-    <link rel="apple-touch-icon" href="assets/logo.png" />
+    <link rel="manifest" href="public/manifest.json" />
+    <link rel="icon" type="image/png" href="public/assets/logo.png" />
+    <link rel="apple-touch-icon" href="public/assets/logo.png" />
     <title>KOPRAL POS MONITOR</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link
@@ -32,6 +32,16 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
     <script>
+      const KOPRAL_BACKEND = (() => {
+        if (
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1"
+        ) {
+          return window.location.origin;
+        }
+        return "https://kopral-coffee-central.onrender.com";
+      })();
+
       async function initializePushNotifications() {
         if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
           console.warn("Push notifications tidak didukung pada browser ini.");
@@ -894,7 +904,11 @@
 
   <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
     <div class="app-container">
-      <img src="assets/watermark.png" class="logo-watermark" alt="Logo" />
+      <img
+        src="public/assets/watermark.png"
+        class="logo-watermark"
+        alt="Logo"
+      />
 
       <div
         id="modal-bukti"
@@ -921,7 +935,7 @@
 
       <div
         id="login-form-container"
-        class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl transition-all duration-500 fade-in"
+        class="fixed inset-0 z-[10000] hidden items-center justify-center p-4 bg-slate-950/90 backdrop-blur-xl transition-all duration-500 fade-in"
       >
         <div
           class="relative w-full max-w-md rounded-[2.5rem] border border-white/10 bg-slate-900/80 p-8 shadow-[0_30px_80px_rgba(15,23,42,0.65)] backdrop-blur-xl"
@@ -1066,7 +1080,7 @@
 
       <div
         id="start-overlay"
-        class="fixed inset-0 z-[9999] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-xl fade-in"
+        class="fixed inset-0 z-[9998] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-xl fade-in"
       >
         <div
           class="w-full max-w-md rounded-[2.5rem] border border-white/10 bg-slate-900/90 p-8 shadow-[0_40px_100px_rgba(15,23,42,0.7)]"
@@ -1089,7 +1103,7 @@
             </p>
           </div>
           <button
-            onclick="startApp()"
+            onclick="showLoginForm()"
             id="btn-start-app"
             class="mx-auto flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-amber-400 to-emerald-400 px-10 py-4 text-lg font-black text-slate-950 shadow-2xl shadow-amber-500/20 glow-button"
           >
@@ -1305,12 +1319,12 @@
 
       <audio
         id="notif-sound"
-        src="https://kopral-coffee-central.onrender.com/notification.mp3"
+        src="/public/notification.mp3"
         preload="auto"
       ></audio>
       <audio
         id="warning-sound"
-        src="https://kopral-coffee-central.onrender.com/warning.mp3"
+        src="/public/warning.mp3"
         preload="auto"
       ></audio>
     </div>
