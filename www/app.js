@@ -1337,6 +1337,7 @@ function updateTotalOmzetSummary(riwayatList, role) {
 
   if (role === "dapur") {
     card.classList.add("hidden");
+    card.style.display = "none";
     return;
   }
 
@@ -1348,6 +1349,7 @@ function updateTotalOmzetSummary(riwayatList, role) {
 
   value.textContent = `Rp ${totalOmzet.toLocaleString()}`;
   card.classList.remove("hidden");
+  card.style.display = "block";
 }
 
 function filterRiwayat() {
@@ -1425,6 +1427,7 @@ function toggleModal(show) {
   const btnRiwayat = document.getElementById("btn-riwayat-pesanan");
   const btnHapus = document.getElementById("btn-hapus-riwayat");
   const role = sessionStorage.getItem("kopral_role");
+  const totalOmzetCard = document.getElementById("total-omzet-container");
 
   if (show) {
     modal.classList.remove("hidden");
@@ -1436,11 +1439,19 @@ function toggleModal(show) {
       if (btnExport) btnExport.classList.add("hidden");
       if (btnHapus) btnHapus.classList.add("hidden");
       if (btnRiwayat) btnRiwayat.classList.remove("hidden");
+      if (totalOmzetCard) {
+        totalOmzetCard.classList.add("hidden");
+        totalOmzetCard.style.display = "none";
+      }
     } else {
       if (btnCetak) btnCetak.classList.remove("hidden");
       if (btnExport) btnExport.classList.remove("hidden");
       if (btnHapus) btnHapus.classList.remove("hidden");
       if (btnRiwayat) btnRiwayat.classList.remove("hidden");
+      if (totalOmzetCard) {
+        totalOmzetCard.classList.remove("hidden");
+        totalOmzetCard.style.display = "block";
+      }
     }
     document.getElementById("input-tanggal").value = new Date()
       .toISOString()
