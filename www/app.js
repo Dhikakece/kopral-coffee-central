@@ -1191,20 +1191,11 @@ function downloadCSV() {
   a.click();
 }
 
-function filterRiwayat() {
-  const role = sessionStorage.getItem("kopral_role");
-  const tanggal = document.getElementById("input-tanggal").value;
-  const container = document.getElementById("container-riwayat");
-  const riwayat = JSON.parse(
-    localStorage.getItem("kopral_riwayat_data") || "[]",
-  );
-
+function renderRiwayatEntries(container, riwayatList, role, showTotal = true) {
   container.innerHTML = "";
-  const filtered = tanggal
-    ? riwayat.filter((i) => i.tanggal === tanggal)
-    : riwayat;
+  const filtered = Array.isArray(riwayatList) ? riwayatList : [];
 
-  if (role !== "dapur") {
+  if (showTotal && role !== "dapur") {
     const totalOmzet = filtered.reduce(
       (acc, r) =>
         acc + r.items.reduce((sub, i) => sub + i.price * i.quantity, 0),
@@ -1218,7 +1209,8 @@ function filterRiwayat() {
 
   filtered.forEach((item) => {
     const div = document.createElement("div");
-    div.className = "bg-slate-900 p-4 rounded-xl border border-slate-700 mb-3";
+    div.className =
+      "bg-slate-900 p-3 sm:p-4 rounded-xl border border-slate-700 mb-3 shadow-sm";
 
     if (role === "dapur") {
       const waktu = item.timestamp
@@ -1238,42 +1230,42 @@ function filterRiwayat() {
       `;
       div.innerHTML = `
         <div class="order-card-inner">
-          <div class="flex justify-between items-start mb-4">
-            <div class="flex items-start gap-4">
-              <div class="order-avatar bg-gradient-to-br from-amber-400 to-emerald-400">${item.meja || "-"}</div>
-              <div>
-                <h3 class="font-bold text-white text-lg">${item.nama || "-"}</h3>
+          <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-3">
+            <div class="flex items-start gap-3 min-w-0">
+              <div class="order-avatar bg-gradient-to-br from-amber-400 to-emerald-400 flex-shrink-0">${item.meja || "-"}</div>
+              <div class="min-w-0">
+                <h3 class="font-bold text-white text-base sm:text-lg leading-tight">${item.nama || "-"}</h3>
                 <div class="mt-1 flex flex-wrap gap-2 items-center">
                   <span class="pill bg-amber-500/10 text-amber-500 border border-amber-500/20">MEJA ${item.meja || "-"}</span>
                   <span class="badge-order-type">${metode}</span>
                 </div>
-                <div class="mt-2 text-[12px] text-slate-400"><i class="fas fa-clock mr-1"></i> Jam Masuk: ${waktu}</div>
+                <div class="mt-2 text-[11px] sm:text-[12px] text-slate-400 break-words"><i class="fas fa-clock mr-1"></i> Jam Masuk: ${waktu}</div>
               </div>
             </div>
-            <div class="text-right">
-              <div class="text-slate-400 text-sm">#${item.id_pesanan || "-"}</div>
+            <div class="text-left sm:text-right flex-shrink-0">
+              <div class="text-slate-400 text-[11px] sm:text-sm">#${item.id_pesanan || "-"}</div>
               <div class="mt-2">${paymentBadge}</div>
             </div>
           </div>
-          <div class="order-items rounded-2xl p-4 mb-4">
+          <div class="order-items rounded-2xl p-3 sm:p-4 mb-3">
             ${item.items
               .map(
                 (i) => `
-                  <div class="order-item">
-                    <div class="name text-slate-300 text-sm">${i.quantity}x ${i.name}</div>
-                    <div class="price">Rp ${Number(i.price).toLocaleString()}</div>
-                    ${i.note ? `<div class="w-full text-[11px] text-amber-400 italic mt-2">• ${i.note}</div>` : ""}
+                  <div class="order-item flex items-start justify-between gap-2 py-1.5">
+                    <div class="name text-slate-300 text-[12px] sm:text-sm leading-5 min-w-0 pr-2">${i.quantity}x ${i.name}</div>
+                    <div class="price text-[12px] sm:text-sm text-slate-200 whitespace-nowrap">Rp ${Number(i.price).toLocaleString()}</div>
+                    ${i.note ? `<div class="w-full text-[10px] sm:text-[11px] text-amber-400 italic mt-1">• ${i.note}</div>` : ""}
                   </div>
                 `,
               )
               .join("")}
-            <div class="order-total border-t border-slate-700/50 mt-2 pt-2 text-white flex justify-between">
+            <div class="order-total border-t border-slate-700/50 mt-2 pt-2 text-white flex justify-between gap-3 text-[12px] sm:text-sm font-semibold">
               <span>TOTAL</span>
               <span>Rp ${Number(item.total || item.items.reduce((acc, i) => acc + i.price * i.quantity, 0)).toLocaleString()}</span>
             </div>
           </div>
-          <div class="mt-3 text-center">
-            <span class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-emerald-300">
+          <div class="mt-2 text-center">
+            <span class="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[10px] sm:text-[11px] font-bold uppercase tracking-widest text-emerald-300">
               <i class="fas fa-check-circle"></i> Pesanan Selesai
             </span>
           </div>
@@ -1326,6 +1318,40 @@ function filterRiwayat() {
 
     container.appendChild(div);
   });
+}
+
+function filterRiwayat() {
+  const role = sessionStorage.getItem("kopral_role");
+  const tanggal = document.getElementById("input-tanggal").value;
+  const container = document.getElementById("container-riwayat");
+  const riwayat = JSON.parse(
+    localStorage.getItem("kopral_riwayat_data") || "[]",
+  );
+
+  const filtered = tanggal
+    ? riwayat.filter((i) => i.tanggal === tanggal)
+    : riwayat;
+
+  renderRiwayatEntries(container, filtered, role, true);
+}
+
+function toggleRiwayatPopup(show) {
+  const popup = document.getElementById("history-popup");
+  const content = document.getElementById("popup-riwayat-content");
+  if (!popup || !content) return;
+
+  if (show) {
+    popup.classList.remove("hidden");
+    popup.classList.add("flex");
+    const role = sessionStorage.getItem("kopral_role");
+    const riwayat = JSON.parse(
+      localStorage.getItem("kopral_riwayat_data") || "[]",
+    );
+    renderRiwayatEntries(content, riwayat, role, false);
+  } else {
+    popup.classList.add("hidden");
+    popup.classList.remove("flex");
+  }
 }
 
 function hapusRiwayatManual() {
