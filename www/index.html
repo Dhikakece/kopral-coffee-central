@@ -200,6 +200,10 @@
         overscroll-behavior-y: contain;
       }
 
+      #history-popup {
+        touch-action: pan-y;
+      }
+
       .badge-order-type {
         display: inline-block;
         background-color: #334155;
@@ -649,7 +653,81 @@
         -webkit-overflow-scrolling: touch;
       }
 
+      /* Modal layout improvements for settings/history on mobile */
+      #modal .relative {
+        width: min(100%, 980px);
+        max-width: min(96vw, 980px);
+        max-height: min(94dvh, 860px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+      }
+
+      #modal .relative > .flex.justify-between.items-start.gap-4.mb-6 {
+        flex-shrink: 0;
+        margin-bottom: 0.75rem;
+      }
+
+      #modal .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+        gap: 1rem;
+        align-items: start;
+        min-height: 0;
+        flex: 1 1 auto;
+        overflow: hidden;
+      }
+
+      #modal .lg\:col-span-1,
+      #modal .lg\:col-span-2 {
+        min-width: 0;
+        min-height: 0;
+      }
+
+      #modal #container-riwayat {
+        width: 100%;
+        min-height: 220px;
+        max-height: min(54dvh, 420px);
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 0.85rem;
+        border-radius: 1.25rem;
+      }
+
       /* Mobile-responsive modal layout */
+      @media (max-width: 1023px) {
+        #modal .relative {
+          width: min(100%, 560px);
+          max-width: min(100%, 560px);
+          max-height: min(96dvh, 860px);
+          padding: 0.9rem;
+          border-radius: 1.5rem;
+        }
+
+        #modal .relative > .flex.justify-between.items-start.gap-4.mb-6 {
+          gap: 0.75rem;
+        }
+
+        #modal .grid {
+          grid-template-columns: 1fr !important;
+          gap: 0.75rem;
+        }
+
+        #modal .lg\:col-span-1,
+        #modal .lg\:col-span-2 {
+          display: block;
+          width: 100%;
+          grid-column: auto;
+        }
+
+        #modal #container-riwayat {
+          max-height: min(46dvh, 380px);
+          min-height: 220px;
+          padding: 0.75rem;
+        }
+      }
+
       @media (max-width: 767px) {
         header.site-top {
           flex-wrap: wrap;
@@ -893,6 +971,13 @@
         #container-riwayat {
           max-height: 250px;
           font-size: 0.7rem;
+        }
+
+        #history-popup .relative {
+          width: min(100%, 96vw);
+          max-height: min(92dvh, 860px);
+          padding: 1rem;
+          border-radius: 1.25rem;
         }
 
         .glass-panel {
@@ -1174,6 +1259,12 @@
                   <i class="fas fa-file-csv mr-2"></i> EXPORT CSV
                 </button>
                 <button
+                  onclick="toggleRiwayatPopup(true)"
+                  class="bg-gradient-to-r from-violet-600 to-fuchsia-500 text-white py-3 px-4 rounded-3xl text-xs font-bold shadow-lg shadow-violet-500/20 hover:from-violet-500 hover:to-fuchsia-500 transition w-full"
+                >
+                  <i class="fas fa-history mr-2"></i> RIWAYAT PESANAN
+                </button>
+                <button
                   onclick="hapusRiwayatManual()"
                   class="bg-slate-900/80 border border-red-500/20 text-red-400 py-3 px-4 rounded-3xl text-xs font-bold hover:bg-red-500/10 transition w-full"
                 >
@@ -1206,6 +1297,37 @@
               ></div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div
+        id="history-popup"
+        class="fixed inset-0 z-[60] hidden items-center justify-center p-3 bg-slate-950/70 backdrop-blur-sm"
+      >
+        <div onclick="toggleRiwayatPopup(false)" class="absolute inset-0"></div>
+        <div
+          class="relative w-full max-w-5xl max-h-[90dvh] overflow-hidden rounded-[2rem] border border-slate-700/60 bg-slate-900/95 p-4 shadow-2xl sm:p-5"
+        >
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fas fa-history text-amber-400"></i> Riwayat Pesanan
+              </h3>
+              <p class="text-slate-400 text-xs sm:text-sm mt-1">
+                Seluruh riwayat pesanan tersimpan dalam satu popup terpisah.
+              </p>
+            </div>
+            <button
+              onclick="toggleRiwayatPopup(false)"
+              class="rounded-full border border-slate-700 bg-slate-800/70 p-2.5 text-slate-300 transition hover:text-white"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div
+            id="popup-riwayat-content"
+            class="max-h-[70dvh] overflow-y-auto pr-2 custom-scrollbar space-y-3"
+          ></div>
         </div>
       </div>
 
