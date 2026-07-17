@@ -105,20 +105,21 @@ let firebaseAdmin = null;
 let firebaseAvailable = false;
 try {
   const admin = require("firebase-admin");
-  if (fs.existsSync(FIREBASE_SERVICE_ACCOUNT_PATH)) {
-    const serviceAccount = require(FIREBASE_SERVICE_ACCOUNT_PATH);
+  // Menggunakan Environment Variable dari Render untuk keamanan
+  const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
+
+  if (serviceAccountVar) {
+    const serviceAccount = JSON.parse(serviceAccountVar);
     admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
     firebaseAdmin = admin;
     firebaseAvailable = true;
-    console.log("[Firebase] Firebase Admin initialized for FCM.");
+    console.log("[Firebase] Firebase Admin initialized using Environment Variable.");
   } else {
-    console.log(
-      "[Firebase] Service account not found, FCM disabled. Place data/firebase-service-account.json to enable.",
-    );
+    console.log("[Firebase] Environment variable FIREBASE_SERVICE_ACCOUNT not found. FCM disabled.");
   }
 } catch (e) {
   console.warn(
-    "[Firebase] firebase-admin not available or failed to initialize:",
+    "[Firebase] firebase-admin failed to initialize:",
     e && e.message ? e.message : e,
   );
 }
@@ -341,17 +342,29 @@ async function sendFCMNotificationToDevices(payload) {
     const devices = loadDevices();
     const tokens = devices.map((d) => d.token).filter(Boolean);
     if (!tokens.length) return;
+
     const message = {
       notification: {
         title: payload.title || "KOPRAL POS",
         body: payload.body || "Ada notifikasi baru",
+      },
+      // PENTING: Pengaturan Android agar muncul spanduk & suara saat aplikasi mati
+      android: {
+        priority: "high",
+        notification: {
+          channelId: "push-notification-channel-id", // SAMA dengan di MainActivity.java
+          sound: "notification", // Memanggil res/raw/notification.mp3
+          visibility: "public"
+        }
       },
       data: payload.data || {},
       tokens,
     };
 
     const response = await firebaseAdmin.messaging().sendMulticast(message);
-    // Remove invalid tokens
+    console.log(`[Firebase] Berhasil kirim ke ${response.successCount} perangkat.`);
+
+    // Hapus token yang sudah tidak aktif
     const invalidIndexes = [];
     response.responses.forEach((r, idx) => {
       if (!r.success) invalidIndexes.push(idx);
