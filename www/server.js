@@ -206,6 +206,60 @@ function saveStockCatalog() {
   }
 }
 
+const PENDING_ORDERS_PATH = path.join(__dirname, "data", "pending_orders.json");
+
+function loadPendingOrders() {
+  try {
+    if (!fs.existsSync(PENDING_ORDERS_PATH)) {
+      fs.writeFileSync(PENDING_ORDERS_PATH, JSON.stringify([], null, 2));
+      return [];
+    }
+    const file = fs.readFileSync(PENDING_ORDERS_PATH, "utf8");
+    const parsed = JSON.parse(file || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error("[Server] Gagal membaca pending orders:", e);
+    return [];
+  }
+}
+
+function savePendingOrders(orders) {
+  try {
+    const safe = Array.isArray(orders) ? orders : [];
+    fs.writeFileSync(PENDING_ORDERS_PATH, JSON.stringify(safe, null, 2));
+  } catch (e) {
+    console.error("[Server] Gagal menyimpan pending orders:", e);
+  }
+}
+
+function upsertPendingOrder(order) {
+  if (!order || !order.id_pesanan) return null;
+  const pending = loadPendingOrders();
+  const normalized = {
+    ...order,
+    timestamp: order.timestamp || new Date().getTime(),
+    tanggal: order.tanggal || new Date().toISOString().split("T")[0],
+  };
+  const existingIndex = pending.findIndex(
+    (entry) => entry.id_pesanan === normalized.id_pesanan,
+  );
+  if (existingIndex >= 0) {
+    pending[existingIndex] = { ...pending[existingIndex], ...normalized };
+  } else {
+    pending.unshift(normalized);
+  }
+  savePendingOrders(pending);
+  return pending;
+}
+
+function removePendingOrder(id) {
+  if (!id) return [];
+  const pending = loadPendingOrders();
+  const next = pending.filter((entry) => entry.id_pesanan !== id);
+  savePendingOrders(next);
+  return next;
+}
+
 function riwayatFileForRole(role) {
   const safe = String(role || "global")
     .replace(/[^a-z0-9_-]/gi, "_")
@@ -524,6 +578,13 @@ app.post("/api/pesanan-masuk", (req, res) => {
   delete sanitized.bukti_transfer;
   delete sanitized.buktiTransfer;
 
+  const pendingOrder = {
+    ...adminPayload,
+    timestamp: dataPesanan.timestamp || new Date().getTime(),
+    tanggal: dataPesanan.tanggal || new Date().toISOString().split("T")[0],
+  };
+  upsertPendingOrder(pendingOrder);
+
   // Emit sanitized ke semua klien
   io.emit("notifikasi-pesanan-baru", { ...sanitized, stocksDeducted });
   // Emit lengkap ke admin room (jika ada bukti)
@@ -622,6 +683,19 @@ app.post("/update-stok", (req, res) => {
     .json({ success: true, message: "Stok berhasil disinkronkan." });
 });
 
+// Ambil antrean pesanan yang masih aktif dari server
+app.get("/api/pesanan-aktif", (req, res) => {
+  try {
+    const orders = loadPendingOrders();
+    return res.status(200).json({ success: true, orders });
+  } catch (e) {
+    console.error("[Server] Error /api/pesanan-aktif:", e);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+});
+
 // Endpoint untuk menandai pesanan selesai secara sentral dan menyimpan riwayat
 app.post("/api/pesanan-selesai", (req, res) => {
   try {
@@ -662,6 +736,7 @@ app.post("/api/pesanan-selesai", (req, res) => {
       dataPesanan.tanggal || new Date().toISOString().split("T")[0];
     riwayat.unshift(dataPesanan);
     saveRiwayat(riwayat, sourceRole);
+    removePendingOrder(dataPesanan.id_pesanan);
 
     // Broadcast ke klien dengan role yang sama saja
     const room = sourceRole.replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
