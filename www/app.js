@@ -1310,8 +1310,14 @@ function cetakLaporanPDF() {
 
   const filename = `Laporan_Penjualan_${new Date().toISOString().split("T")[0]}.pdf`;
 
-  // Gunakan Capacitor Filesystem jika di Android, jika tidak gunakan download browser biasa
-  if (typeof Capacitor !== "undefined" && Capacitor.isNativePlatform()) {
+  // Deteksi platform native Capacitor
+  const isNative =
+    window.Capacitor &&
+    (typeof window.Capacitor.isNativePlatform === "function"
+      ? window.Capacitor.isNativePlatform()
+      : window.Capacitor.platform !== "web");
+
+  if (isNative) {
     const base64String = doc.output("datauristring").split(",")[1];
     saveFileNative(filename, base64String);
   } else {
@@ -1321,36 +1327,49 @@ function cetakLaporanPDF() {
 
 async function saveFileNative(filename, data, directory = "DOCUMENTS") {
   try {
-    const { Filesystem } = Capacitor.Plugins;
-
-    // Validasi data sebelum memproses
-    if (!data) {
-      console.error("SaveFileNative: Data kosong");
-      return false;
+    const Filesystem = window.Capacitor?.Plugins?.Filesystem;
+    if (!Filesystem) {
+      throw new Error(
+        "Plugin Filesystem tidak ditemukan atau belum disinkronisasi",
+      );
     }
 
+    // Request Izin jika belum ada
+    const permStatus = await Filesystem.checkPermissions();
+    if (permStatus.publicStorage !== "granted") {
+      const request = await Filesystem.requestPermissions();
+      if (request.publicStorage !== "granted") {
+        throw new Error(
+          "Izin penyimpanan ditolak. Silakan izinkan di Pengaturan HP.",
+        );
+      }
+    }
+
+    // Validasi data
+    if (!data) throw new Error("Data file kosong");
+
     await Filesystem.writeFile({
-      path: filename, // Langsung gunakan filename tanpa subfolder dulu untuk tes
+      path: filename,
       data: data,
       directory: directory,
-      encoding: filename.endsWith('.csv') ? "utf8" : undefined,
+      encoding: filename.endsWith(".csv") ? "utf8" : undefined,
       recursive: true,
     });
 
-    Swal.fire(
-      "Berhasil",
-      `File ${filename} berhasil disimpan di folder Documents`,
-      "success"
-    );
+    Swal.fire({
+      title: "Berhasil!",
+      text: `File tersimpan di folder Documents/${filename}`,
+      icon: "success",
+      confirmButtonColor: "#10b981",
+    });
     return true;
   } catch (e) {
-    console.error("Gagal menyimpan file secara native:", e);
-
-    // Berikan pesan error yang lebih detail ke layar HP
+    console.error("Native Save Error:", e);
     Swal.fire({
       title: "Gagal Menyimpan",
-      text: "Error: " + (e.message || e.errorMessage || "Masalah izin penyimpanan"),
-      icon: "error"
+      text: e.message || "Pastikan izin penyimpanan sudah aktif",
+      icon: "error",
+      confirmButtonColor: "#ef4444",
     });
     return false;
   }
@@ -1418,7 +1437,13 @@ function downloadCSV() {
 
   const filename = `Riwayat_${new Date().toISOString().split("T")[0]}.csv`;
 
-  if (typeof Capacitor !== "undefined" && Capacitor.isNativePlatform()) {
+  const isNative =
+    window.Capacitor &&
+    (typeof window.Capacitor.isNativePlatform === "function"
+      ? window.Capacitor.isNativePlatform()
+      : window.Capacitor.platform !== "web");
+
+  if (isNative) {
     saveFileNative(filename, csv);
   } else {
     const blob = new Blob([csv], { type: "text/csv" });
