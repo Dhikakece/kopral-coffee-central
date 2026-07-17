@@ -22,6 +22,36 @@ function loadPersistedOrders() {
   updateIncomingOrderCounter();
 }
 
+async function syncPendingOrdersFromServer() {
+  try {
+    const backend =
+      typeof KOPRAL_BACKEND !== "undefined"
+        ? KOPRAL_BACKEND
+        : window.location.origin;
+    const response = await fetch(`${backend}/api/pesanan-aktif`);
+    const data = await response.json();
+    if (data && data.success && Array.isArray(data.orders)) {
+      const synced = {};
+      data.orders.forEach((order) => {
+        if (!order || !order.id_pesanan) return;
+        synced[order.id_pesanan] = {
+          ...order,
+          timestamp: order.timestamp || new Date().getTime(),
+        };
+      });
+      activeOrders = synced;
+      localStorage.setItem(
+        "kopral_active_orders",
+        JSON.stringify(activeOrders),
+      );
+      renderActiveOrders();
+      updateIncomingOrderCounter();
+    }
+  } catch (e) {
+    console.warn("[Orders] Gagal mengambil pesanan aktif dari server:", e);
+  }
+}
+
 function restoreAuthState() {
   try {
     const loginSaved = localStorage.getItem("kopral_logged_in") === "true";
@@ -195,6 +225,7 @@ function clearAuthState() {
 }
 
 function logoutKasir() {
+  appStarted = false;
   try {
     if (socket) {
       socket.disconnect();
@@ -382,16 +413,26 @@ function initializeApp() {
   window.addEventListener("online", () => setStatusOnline(true));
   window.addEventListener("offline", () => setStatusOnline(false));
 
-  const { storedRole } = restoreAuthState();
+  const { loginSaved, storedRole } = restoreAuthState();
   if (storedRole) {
     sessionStorage.setItem("kopral_role", storedRole);
     localStorage.setItem("kopral_role", storedRole);
   }
 
   updateAuthControls();
-  showStartScreen();
+  updateRoleLabel();
   loadPersistedOrders();
   renderActiveOrders();
+
+  if (loginSaved && storedRole) {
+    setAuthOverlayState(false);
+    syncPendingOrdersFromServer().catch(() => {});
+    if (!appStarted) {
+      startApp();
+    }
+  } else {
+    showStartScreen();
+  }
 }
 
 if (document.readyState === "loading") {
@@ -439,6 +480,7 @@ function prosesLogin() {
     loadPersistedOrders();
     renderActiveOrders();
     setAuthOverlayState(false);
+    syncPendingOrdersFromServer().catch(() => {});
 
     if (!appStarted) {
       startApp();
@@ -514,6 +556,9 @@ function renderActiveOrders() {
 }
 
 async function startApp() {
+  if (appStarted) return;
+  appStarted = true;
+
   try {
     if (typeof io === "undefined") {
       alert(
@@ -543,6 +588,7 @@ async function startApp() {
     });
     socket.on("connect", () => {
       updateStatus(true);
+      syncPendingOrdersFromServer().catch(() => {});
       // Identifikasi role ke server agar bisa bergabung di room khusus
       try {
         const role =
@@ -640,6 +686,7 @@ async function startApp() {
       watermark.classList.add("show-subtle");
     }
   } catch (err) {
+    appStarted = false;
     Swal.fire("Error", "Gagal terhubung ke server", "error");
   }
 }
