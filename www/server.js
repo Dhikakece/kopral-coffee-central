@@ -5,6 +5,12 @@ const path = require("path");
 const fs = require("fs");
 const webpush = require("web-push");
 
+try {
+  require("dotenv").config();
+} catch (e) {
+  // dotenv is optional; in production env vars should be set externally
+}
+
 const app = express();
 const server = http.createServer(app);
 
@@ -173,6 +179,28 @@ function initializeFirebaseAdmin() {
             e.message,
           );
         }
+      } else if (candidate.source === "GOOGLE_APPLICATION_CREDENTIALS") {
+        try {
+          if (fs.existsSync(candidate.value)) {
+            serviceAccount = JSON.parse(
+              fs.readFileSync(candidate.value, "utf8"),
+            );
+            usedSource = candidate.source;
+            break;
+          }
+        } catch (e) {
+          console.warn(
+            `[Firebase] Gagal baca GOOGLE_APPLICATION_CREDENTIALS ${candidate.value}:`,
+            e.message,
+          );
+        }
+
+        const parsed = parseFirebaseServiceAccount(candidate.value);
+        if (parsed) {
+          serviceAccount = parsed;
+          usedSource = candidate.source;
+          break;
+        }
       } else {
         const parsed = parseFirebaseServiceAccount(candidate.value);
         if (parsed) {
@@ -187,6 +215,11 @@ function initializeFirebaseAdmin() {
       firebaseInitError = "No valid Firebase service account found.";
       console.warn(
         "[Firebase] Tidak ada service account valid. FCM akan dinonaktifkan sampai credential tersedia.",
+      );
+      console.warn(
+        `[Firebase] Kandidat credential dicek: ${candidates
+          .map((c) => c.source)
+          .join(", ")}`,
       );
       return;
     }
@@ -208,13 +241,6 @@ function initializeFirebaseAdmin() {
   }
 }
 initializeFirebaseAdmin();
-
-// Load environment variables from .env (optional)
-try {
-  require("dotenv").config();
-} catch (e) {
-  // dotenv is optional; in production env vars should be set externally
-}
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
