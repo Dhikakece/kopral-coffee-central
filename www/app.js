@@ -18,6 +18,8 @@ function loadPersistedOrders() {
   } catch (e) {
     console.warn("Gagal memuat antrean tersimpan:", e);
   }
+
+  updateIncomingOrderCounter();
 }
 
 function restoreAuthState() {
@@ -52,6 +54,8 @@ function showStartScreen() {
     startOverlay.classList.remove("hidden");
     startOverlay.style.display = "flex";
   }
+
+  updateAuthControls();
 }
 
 function showLoginForm() {
@@ -68,6 +72,8 @@ function showLoginForm() {
     loginContainer.style.display = "flex";
     loginContainer.style.opacity = "1";
   }
+
+  updateAuthControls();
 }
 
 function setAuthOverlayState(showLogin) {
@@ -91,14 +97,117 @@ function setAuthOverlayState(showLogin) {
   }
 }
 
+function updateRoleLabel() {
+  const roleLabel = document.getElementById("role-label");
+  const headerRole = document.getElementById("header-role");
+  if (!roleLabel && !headerRole) return;
+
+  const role =
+    sessionStorage.getItem("kopral_role") ||
+    localStorage.getItem("kopral_role") ||
+    "";
+
+  const labelText =
+    role === "admin" ? "Admin" : role === "dapur" ? "Dapur" : "Belum Login";
+  const headerText =
+    role === "admin" ? "Admin" : role === "dapur" ? "Dapur" : "Belum Login";
+
+  if (roleLabel) {
+    roleLabel.textContent = labelText;
+    if (!role) {
+      roleLabel.className =
+        "mt-4 inline-flex items-center justify-center rounded-full border border-slate-600/40 bg-slate-800/60 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.24em] text-slate-300";
+    } else if (role === "admin") {
+      roleLabel.className =
+        "mt-4 inline-flex items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.24em] text-emerald-300";
+    } else if (role === "dapur") {
+      roleLabel.className =
+        "mt-4 inline-flex items-center justify-center rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.24em] text-amber-300";
+    } else {
+      roleLabel.className =
+        "mt-4 inline-flex items-center justify-center rounded-full border border-slate-600/40 bg-slate-800/60 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.24em] text-slate-300";
+    }
+  }
+
+  if (headerRole) {
+    headerRole.textContent = headerText;
+    headerRole.className =
+      role === "admin"
+        ? "text-emerald-300 text-xs font-semibold uppercase tracking-[0.2em]"
+        : role === "dapur"
+          ? "text-amber-300 text-xs font-semibold uppercase tracking-[0.2em]"
+          : "text-slate-400 text-xs";
+  }
+}
+
+function updateAuthControls() {
+  const logoutBtn = document.getElementById("btn-logout");
+  const hasLoginState = localStorage.getItem("kopral_logged_in") === "true";
+  const role =
+    sessionStorage.getItem("kopral_role") ||
+    localStorage.getItem("kopral_role") ||
+    "";
+  const isLoggedIn = hasLoginState && !!role;
+
+  if (!logoutBtn) return;
+  logoutBtn.classList.toggle("hidden", !isLoggedIn);
+  logoutBtn.classList.toggle("inline-flex", isLoggedIn);
+  logoutBtn.style.display = isLoggedIn ? "inline-flex" : "none";
+  updateRoleLabel();
+}
+
 function persistAuthState(role) {
   try {
     sessionStorage.setItem("kopral_role", role);
     localStorage.setItem("kopral_role", role);
     localStorage.setItem("kopral_logged_in", "true");
+    updateAuthControls();
   } catch (e) {
     console.warn("Gagal menyimpan state auth:", e);
   }
+}
+
+function clearAuthState() {
+  try {
+    sessionStorage.removeItem("kopral_role");
+    localStorage.removeItem("kopral_role");
+    localStorage.removeItem("kopral_logged_in");
+
+    const userInput = document.getElementById("input-username");
+    const passInput = document.getElementById("input-password");
+    const errUser = document.getElementById("error-user");
+    const errPass = document.getElementById("error-pass");
+
+    if (userInput) userInput.value = "";
+    if (passInput) passInput.value = "";
+    if (errUser) {
+      errUser.classList.add("hidden", "opacity-0");
+      errUser.innerText = "* USERNAME SALAH";
+    }
+    if (errPass) {
+      errPass.classList.add("hidden", "opacity-0");
+      errPass.innerText = "* PASSWORD SALAH";
+    }
+    updateRoleLabel();
+  } catch (e) {
+    console.warn("Gagal membersihkan state auth:", e);
+  }
+}
+
+function logoutKasir() {
+  try {
+    if (socket) {
+      socket.disconnect();
+      socket = null;
+    }
+  } catch (e) {
+    console.warn("Gagal memutus koneksi socket saat logout:", e);
+  }
+
+  clearAuthState();
+  updateAuthControls();
+  setStatusOnline(navigator.onLine);
+  showStartScreen();
 }
 
 const STOCK_STORAGE_KEY = "kopral_stock_state";
@@ -244,36 +353,26 @@ function applyRemoteStockUpdate(update) {
   }
 }
 
-// Theme toggle (light/dark)
-function applyTheme(theme) {
-  if (theme === "light") {
-    document.body.classList.add("theme-light");
-    const icon = document.getElementById("theme-icon");
-    if (icon) icon.className = "fas fa-moon text-amber-500";
-  } else {
-    document.body.classList.remove("theme-light");
-    const icon = document.getElementById("theme-icon");
-    if (icon) icon.className = "fas fa-sun text-amber-300";
-  }
-}
+function updateIncomingOrderCounter() {
+  const countEl = document.getElementById("order-count-value");
+  const button = document.getElementById("order-counter-btn");
+  const count = Object.keys(activeOrders || {}).length;
 
-function toggleTheme() {
-  const isLight = document.body.classList.contains("theme-light");
-  const next = isLight ? "dark" : "light";
-  applyTheme(next);
-  try {
-    localStorage.setItem("kopral_theme", next);
-  } catch (e) {}
+  if (countEl) {
+    countEl.textContent = String(count);
+  }
+
+  if (button) {
+    button.classList.toggle("bg-emerald-500/15", count > 0);
+    button.classList.toggle("text-emerald-300", count > 0);
+    button.classList.toggle("border-emerald-400/30", count > 0);
+    button.classList.toggle("bg-amber-500/15", count === 0);
+    button.classList.toggle("text-amber-300", count === 0);
+    button.classList.toggle("border-amber-400/30", count === 0);
+  }
 }
 
 function initializeApp() {
-  try {
-    const stored = localStorage.getItem("kopral_theme");
-    if (stored) applyTheme(stored);
-  } catch (e) {
-    console.warn("Gagal memuat tema:", e);
-  }
-
   loadPersistedOrders();
   updateItemDropdown();
   renderActiveOrders();
@@ -289,6 +388,7 @@ function initializeApp() {
     localStorage.setItem("kopral_role", storedRole);
   }
 
+  updateAuthControls();
   showStartScreen();
   loadPersistedOrders();
   renderActiveOrders();
@@ -335,6 +435,7 @@ function prosesLogin() {
   if (selected && selected.pass === pass) {
     const role = selected.role;
     persistAuthState(role);
+    updateRoleLabel();
     loadPersistedOrders();
     renderActiveOrders();
     setAuthOverlayState(false);
@@ -409,6 +510,7 @@ function renderActiveOrders() {
   } else {
     document.getElementById("pesan-kosong").classList.remove("hidden");
   }
+  updateIncomingOrderCounter();
 }
 
 async function startApp() {
@@ -495,6 +597,7 @@ async function startApp() {
         JSON.stringify(activeOrders),
       );
       renderActiveOrders();
+      updateIncomingOrderCounter();
       if (isNew) {
         document
           .getElementById("notif-sound")
@@ -896,6 +999,7 @@ async function selesaiPesanan(id) {
     }
     delete activeOrders[id];
     localStorage.setItem("kopral_active_orders", JSON.stringify(activeOrders));
+    updateIncomingOrderCounter();
     card.remove();
     if (Object.keys(activeOrders).length === 0) {
       document.getElementById("pesan-kosong").classList.remove("hidden");
