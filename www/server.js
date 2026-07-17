@@ -448,6 +448,15 @@ function saveDevices(devices) {
   }
 }
 
+function getDeviceFcmToken(device) {
+  const directToken = String(
+    device && (device.fcmToken || device.deviceToken || device.token || "")
+      ? device.fcmToken || device.deviceToken || device.token || ""
+      : "",
+  ).trim();
+  return directToken;
+}
+
 async function sendFCMNotificationToDevices(payload) {
   if (!firebaseAvailable || !firebaseAdmin) {
     console.warn(
@@ -460,9 +469,7 @@ async function sendFCMNotificationToDevices(payload) {
     const devices = loadDevices();
     const tokens = Array.from(
       new Set(
-        devices
-          .map((d) => String(d && d.token ? d.token : "").trim())
-          .filter(Boolean),
+        devices.map((device) => getDeviceFcmToken(device)).filter(Boolean),
       ),
     );
 
@@ -472,7 +479,7 @@ async function sendFCMNotificationToDevices(payload) {
     }
 
     console.log(
-      `[Firebase] Mengirim notifikasi ke ${tokens.length} token terdaftar...`,
+      `[Firebase] Mengirim notifikasi ke ${tokens.length} token FCM terdaftar...`,
     );
 
     const sendPromises = tokens.map(async (token) => {
