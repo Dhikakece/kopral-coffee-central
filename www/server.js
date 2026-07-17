@@ -350,47 +350,74 @@ function saveDevices(devices) {
 }
 
 async function sendFCMNotificationToDevices(payload) {
-  if (!firebaseAvailable || !firebaseAdmin) return;
+  if (!firebaseAvailable || !firebaseAdmin) {
+    console.log("[Firebase] Gagal kirim: Firebase tidak aktif.");
+    return;
+  }
   try {
     const devices = loadDevices();
     const tokens = devices.map((d) => d.token).filter(Boolean);
-    if (!tokens.length) return;
 
-    const message = {
-      notification: {
-        title: payload.title || "KOPRAL POS",
-        body: payload.body || "Ada notifikasi baru",
-      },
-      // PENTING: Pengaturan Android agar muncul spanduk & suara saat aplikasi mati
-      android: {
-        priority: "high",
-        notification: {
-          channelId: "push-notification-channel-id", // SAMA dengan di MainActivity.java
-          sound: "notification", // Memanggil res/raw/notification.mp3
-          visibility: "public",
-        },
-      },
-      data: payload.data || {},
-      tokens,
-    };
+    if (!tokens.length) {
+      console.log("[Firebase] Tidak ada token HP terdaftar.");
+      return;
+    }
 
-    const response = await firebaseAdmin.messaging().sendMulticast(message);
     console.log(
-      `[Firebase] Berhasil kirim ke ${response.successCount} perangkat.`,
+      `[Firebase] Mengirim notifikasi ke ${tokens.length} HP satu per satu...`,
     );
 
-    // Hapus token yang sudah tidak aktif
-    const invalidIndexes = [];
-    response.responses.forEach((r, idx) => {
-      if (!r.success) invalidIndexes.push(idx);
+    // Kirim satu per satu untuk menghindari error 404 /batch (Metode V1 Terbaru)
+    const sendPromises = tokens.map((token) => {
+      const message = {
+        token: token,
+        notification: {
+          title: payload.title || "KOPRAL POS",
+          body: payload.body || "Ada notifikasi baru",
+        },
+        android: {
+          priority: "high",
+          notification: {
+            channelId: "push-notification-channel-id", // Sesuai MainActivity.java
+            sound: "notification",
+            visibility: "public",
+          },
+        },
+        data: payload.data || {},
+      };
+
+      return firebaseAdmin
+        .messaging()
+        .send(message)
+        .then((res) => ({ success: true, token }))
+        .catch((err) => ({ success: false, token, error: err.message }));
     });
-    if (invalidIndexes.length) {
-      const remaining = tokens.filter((_, i) => !invalidIndexes.includes(i));
-      const newDevices = devices.filter((d) => remaining.includes(d.token));
-      saveDevices(newDevices);
+
+    const results = await Promise.all(sendPromises);
+    const successCount = results.filter((r) => r.success).length;
+    const failureCount = results.length - successCount;
+
+    console.log(
+      `[Firebase] Selesai: ${successCount} Berhasil, ${failureCount} Gagal.`,
+    );
+
+    // Bersihkan token mati jika terdeteksi
+    const invalidTokens = results.filter(
+      (r) =>
+        !r.success &&
+        (r.error.includes("not-registered") || r.error.includes("not-found")),
+    );
+    if (invalidTokens.length > 0) {
+      console.log(
+        `[Firebase] Membersihkan ${invalidTokens.length} token mati...`,
+      );
+      const aliveDevices = devices.filter(
+        (d) => !invalidTokens.find((it) => it.token === d.token),
+      );
+      saveDevices(aliveDevices);
     }
   } catch (e) {
-    console.error("[Firebase] Error sending FCM multicast:", e);
+    console.error("[Firebase] Error fatal pada fungsi kirim:", e);
   }
 }
 
