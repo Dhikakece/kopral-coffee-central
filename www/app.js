@@ -1308,7 +1308,38 @@ function cetakLaporanPDF() {
     }
   });
 
-  doc.save(`Laporan_Penjualan_${new Date().toISOString().split("T")[0]}.pdf`);
+  const filename = `Laporan_Penjualan_${new Date().toISOString().split("T")[0]}.pdf`;
+
+  // Gunakan Capacitor Filesystem jika di Android, jika tidak gunakan download browser biasa
+  if (typeof Capacitor !== "undefined" && Capacitor.isNativePlatform()) {
+    const base64String = doc.output("datauristring").split(",")[1];
+    saveFileNative(filename, base64String);
+  } else {
+    doc.save(filename);
+  }
+}
+
+async function saveFileNative(filename, data, directory = "DOCUMENTS") {
+  try {
+    const { Filesystem } = Capacitor.Plugins;
+    await Filesystem.writeFile({
+      path: `KopralKasir/${filename}`,
+      data: data,
+      directory: directory,
+      encoding: typeof data === "string" ? "utf8" : undefined,
+      recursive: true,
+    });
+    Swal.fire(
+      "Berhasil",
+      `File disimpan di folder Documents/KopralKasir/${filename}`,
+      "success",
+    );
+    return true;
+  } catch (e) {
+    console.error("Gagal menyimpan file secara native:", e);
+    Swal.fire("Error", "Gagal menyimpan file ke penyimpanan HP", "error");
+    return false;
+  }
 }
 
 function downloadCSV() {
@@ -1371,12 +1402,18 @@ function downloadCSV() {
     )
     .join("\n");
 
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `Riwayat_${new Date().toISOString().split("T")[0]}.csv`;
-  a.click();
+  const filename = `Riwayat_${new Date().toISOString().split("T")[0]}.csv`;
+
+  if (typeof Capacitor !== "undefined" && Capacitor.isNativePlatform()) {
+    saveFileNative(filename, csv);
+  } else {
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+  }
 }
 
 function renderRiwayatEntries(
