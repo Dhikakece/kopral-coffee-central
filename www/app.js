@@ -403,6 +403,40 @@ function updateIncomingOrderCounter() {
   }
 }
 
+async function syncStockFromServer() {
+  try {
+    const backend =
+      typeof KOPRAL_BACKEND !== "undefined"
+        ? KOPRAL_BACKEND
+        : window.location.origin;
+    const response = await fetch(`${backend}/?action=getMenu`);
+    const data = await response.json();
+    const menuItems = [
+      ...(data?.coffee || []),
+      ...(data?.["non-coffee"] || []),
+      ...(data?.snacks || []),
+    ];
+
+    if (!Array.isArray(menuItems) || menuItems.length === 0) return;
+
+    menuItems.forEach((item) => {
+      if (!item?.id) return;
+      const existing = stockData[item.id];
+      if (!existing) return;
+      const latestStock = Number(item.stock) || 0;
+      existing.stock = latestStock;
+      existing._lastLocalUpdate = new Date().getTime();
+      stockData[item.id] = existing;
+    });
+
+    localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stockData));
+    updateItemDropdown();
+    updateStockStatus();
+  } catch (e) {
+    console.warn("[Stock] Gagal sinkronisasi stok dari server:", e);
+  }
+}
+
 function initializeApp() {
   loadPersistedOrders();
   updateItemDropdown();
@@ -423,6 +457,7 @@ function initializeApp() {
   updateRoleLabel();
   loadPersistedOrders();
   renderActiveOrders();
+  syncStockFromServer().catch(() => {});
 
   if (loginSaved && storedRole) {
     setAuthOverlayState(false);
@@ -481,6 +516,7 @@ function prosesLogin() {
     renderActiveOrders();
     setAuthOverlayState(false);
     syncPendingOrdersFromServer().catch(() => {});
+    syncStockFromServer().catch(() => {});
 
     if (!appStarted) {
       startApp();
@@ -589,6 +625,7 @@ async function startApp() {
     socket.on("connect", () => {
       updateStatus(true);
       syncPendingOrdersFromServer().catch(() => {});
+      syncStockFromServer().catch(() => {});
       // Identifikasi role ke server agar bisa bergabung di room khusus
       try {
         const role =
