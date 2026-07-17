@@ -1209,7 +1209,9 @@
             <div class="title">
               KOPRAL <span class="text-amber-400">POS</span>
             </div>
-            <div class="text-slate-400 text-xs">Monitor</div>
+            <div id="header-role" class="text-slate-400 text-xs">
+              Belum Login
+            </div>
           </div>
         </div>
 
@@ -1238,12 +1240,26 @@
             Pengaturan
           </button>
           <button
-            id="theme-toggle"
-            onclick="toggleTheme()"
-            title="Toggle theme"
-            class="nav-btn bg-slate-700 text-white/90"
+            id="btn-logout"
+            onclick="logoutKasir()"
+            class="nav-btn hidden bg-rose-600/90 text-white"
           >
-            <i id="theme-icon" class="fas fa-sun text-amber-300"></i>
+            <i class="fas fa-sign-out-alt"></i>
+            Logout
+          </button>
+
+          <button
+            id="order-counter-btn"
+            title="Jumlah pesanan masuk"
+            class="nav-btn bg-amber-500/15 text-amber-300 border border-amber-400/30"
+          >
+            <i class="fas fa-bell"></i>
+            <span id="order-count-value" class="ml-1 font-black text-sm"
+              >0</span
+            >
+            <span class="ml-1 text-[10px] uppercase tracking-[0.2em]"
+              >Pesanan</span
+            >
           </button>
         </div>
       </header>
@@ -1271,6 +1287,12 @@
               Selamat datang di monitor kasir Kopral. Mulai aplikasi dan layani
               pesanan lebih cepat.
             </p>
+            <div
+              id="role-label"
+              class="mt-4 inline-flex items-center justify-center rounded-full border border-amber-400/30 bg-amber-400/10 px-4 py-2 text-[11px] font-bold uppercase tracking-[0.24em] text-amber-300"
+            >
+              Memuat role...
+            </div>
           </div>
           <button
             onclick="showLoginForm()"
