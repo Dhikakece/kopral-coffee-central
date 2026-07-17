@@ -105,23 +105,29 @@ let firebaseAdmin = null;
 let firebaseAvailable = false;
 try {
   const admin = require("firebase-admin");
-  // Menggunakan Environment Variable dari Render untuk keamanan
   const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
 
   if (serviceAccountVar) {
-    const serviceAccount = JSON.parse(serviceAccountVar);
-    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-    firebaseAdmin = admin;
-    firebaseAvailable = true;
-    console.log("[Firebase] Firebase Admin initialized using Environment Variable.");
+    try {
+      const serviceAccount = JSON.parse(serviceAccountVar);
+
+      if (admin.apps.length === 0) {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount)
+        });
+      }
+
+      firebaseAdmin = admin;
+      firebaseAvailable = true;
+      console.log("[Firebase] Firebase Admin BERHASIL aktif menggunakan Env Var.");
+    } catch (parseErr) {
+      console.error("[Firebase] Gagal parse JSON FIREBASE_SERVICE_ACCOUNT:", parseErr.message);
+    }
   } else {
-    console.log("[Firebase] Environment variable FIREBASE_SERVICE_ACCOUNT not found. FCM disabled.");
+    console.log("[Firebase] Gagal: Variabel FIREBASE_SERVICE_ACCOUNT tidak ditemukan di Render.");
   }
 } catch (e) {
-  console.warn(
-    "[Firebase] firebase-admin failed to initialize:",
-    e && e.message ? e.message : e,
-  );
+  console.error("[Firebase] GAGAL TOTAL Inisialisasi:", e.message);
 }
 // Load environment variables from .env (optional)
 try {
