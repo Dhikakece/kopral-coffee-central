@@ -1322,22 +1322,36 @@ function cetakLaporanPDF() {
 async function saveFileNative(filename, data, directory = "DOCUMENTS") {
   try {
     const { Filesystem } = Capacitor.Plugins;
+
+    // Validasi data sebelum memproses
+    if (!data) {
+      console.error("SaveFileNative: Data kosong");
+      return false;
+    }
+
     await Filesystem.writeFile({
-      path: `KopralKasir/${filename}`,
+      path: filename, // Langsung gunakan filename tanpa subfolder dulu untuk tes
       data: data,
       directory: directory,
-      encoding: typeof data === "string" ? "utf8" : undefined,
+      encoding: filename.endsWith('.csv') ? "utf8" : undefined,
       recursive: true,
     });
+
     Swal.fire(
       "Berhasil",
-      `File disimpan di folder Documents/KopralKasir/${filename}`,
-      "success",
+      `File ${filename} berhasil disimpan di folder Documents`,
+      "success"
     );
     return true;
   } catch (e) {
     console.error("Gagal menyimpan file secara native:", e);
-    Swal.fire("Error", "Gagal menyimpan file ke penyimpanan HP", "error");
+
+    // Berikan pesan error yang lebih detail ke layar HP
+    Swal.fire({
+      title: "Gagal Menyimpan",
+      text: "Error: " + (e.message || e.errorMessage || "Masalah izin penyimpanan"),
+      icon: "error"
+    });
     return false;
   }
 }
