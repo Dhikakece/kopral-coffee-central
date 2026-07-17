@@ -113,18 +113,25 @@ try {
 
       if (admin.apps.length === 0) {
         admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount)
+          credential: admin.credential.cert(serviceAccount),
         });
       }
 
       firebaseAdmin = admin;
       firebaseAvailable = true;
-      console.log("[Firebase] Firebase Admin BERHASIL aktif menggunakan Env Var.");
+      console.log(
+        "[Firebase] Firebase Admin BERHASIL aktif menggunakan Env Var.",
+      );
     } catch (parseErr) {
-      console.error("[Firebase] Gagal parse JSON FIREBASE_SERVICE_ACCOUNT:", parseErr.message);
+      console.error(
+        "[Firebase] Gagal parse JSON FIREBASE_SERVICE_ACCOUNT:",
+        parseErr.message,
+      );
     }
   } else {
-    console.log("[Firebase] Gagal: Variabel FIREBASE_SERVICE_ACCOUNT tidak ditemukan di Render.");
+    console.log(
+      "[Firebase] Gagal: Variabel FIREBASE_SERVICE_ACCOUNT tidak ditemukan di Render.",
+    );
   }
 } catch (e) {
   console.error("[Firebase] GAGAL TOTAL Inisialisasi:", e.message);
@@ -360,15 +367,17 @@ async function sendFCMNotificationToDevices(payload) {
         notification: {
           channelId: "push-notification-channel-id", // SAMA dengan di MainActivity.java
           sound: "notification", // Memanggil res/raw/notification.mp3
-          visibility: "public"
-        }
+          visibility: "public",
+        },
       },
       data: payload.data || {},
       tokens,
     };
 
     const response = await firebaseAdmin.messaging().sendMulticast(message);
-    console.log(`[Firebase] Berhasil kirim ke ${response.successCount} perangkat.`);
+    console.log(
+      `[Firebase] Berhasil kirim ke ${response.successCount} perangkat.`,
+    );
 
     // Hapus token yang sudah tidak aktif
     const invalidIndexes = [];
