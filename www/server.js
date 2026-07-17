@@ -103,39 +103,112 @@ const FIREBASE_SERVICE_ACCOUNT_PATH = path.join(
 
 let firebaseAdmin = null;
 let firebaseAvailable = false;
-try {
-  const admin = require("firebase-admin");
-  const serviceAccountVar = process.env.FIREBASE_SERVICE_ACCOUNT;
+let firebaseInitError = null;
 
-  if (serviceAccountVar) {
+function parseFirebaseServiceAccount(rawValue) {
+  if (!rawValue) return null;
+  const value = String(rawValue).trim();
+  if (!value) return null;
+
+  try {
+    return JSON.parse(value);
+  } catch (e) {
+    // coba decode dari base64 jika env var dikirim dalam bentuk base64
     try {
-      const serviceAccount = JSON.parse(serviceAccountVar);
-
-      if (admin.apps.length === 0) {
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccount),
-        });
+      const decoded = Buffer.from(value, "base64").toString("utf8").trim();
+      if (decoded.startsWith("{")) {
+        return JSON.parse(decoded);
       }
-
-      firebaseAdmin = admin;
-      firebaseAvailable = true;
-      console.log(
-        "[Firebase] Firebase Admin BERHASIL aktif menggunakan Env Var.",
-      );
-    } catch (parseErr) {
-      console.error(
-        "[Firebase] Gagal parse JSON FIREBASE_SERVICE_ACCOUNT:",
-        parseErr.message,
-      );
+    } catch (decodeErr) {
+      // ignore
     }
-  } else {
-    console.log(
-      "[Firebase] Gagal: Variabel FIREBASE_SERVICE_ACCOUNT tidak ditemukan di Render.",
-    );
   }
-} catch (e) {
-  console.error("[Firebase] GAGAL TOTAL Inisialisasi:", e.message);
+  return null;
 }
+
+function initializeFirebaseAdmin() {
+  try {
+    const admin = require("firebase-admin");
+    const candidates = [];
+
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      candidates.push({
+        source: "FIREBASE_SERVICE_ACCOUNT",
+        value: process.env.FIREBASE_SERVICE_ACCOUNT,
+      });
+    }
+    if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+      candidates.push({
+        source: "FIREBASE_SERVICE_ACCOUNT_BASE64",
+        value: process.env.FIREBASE_SERVICE_ACCOUNT_BASE64,
+      });
+    }
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+      candidates.push({
+        source: "GOOGLE_APPLICATION_CREDENTIALS",
+        value: process.env.GOOGLE_APPLICATION_CREDENTIALS,
+      });
+    }
+    if (fs.existsSync(FIREBASE_SERVICE_ACCOUNT_PATH)) {
+      candidates.push({
+        source: "local-file",
+        value: FIREBASE_SERVICE_ACCOUNT_PATH,
+      });
+    }
+
+    let serviceAccount = null;
+    let usedSource = null;
+
+    for (const candidate of candidates) {
+      if (!candidate.value) continue;
+
+      if (candidate.source === "local-file") {
+        try {
+          serviceAccount = JSON.parse(fs.readFileSync(candidate.value, "utf8"));
+          usedSource = candidate.source;
+          break;
+        } catch (e) {
+          console.warn(
+            `[Firebase] Gagal baca file ${candidate.value}:`,
+            e.message,
+          );
+        }
+      } else {
+        const parsed = parseFirebaseServiceAccount(candidate.value);
+        if (parsed) {
+          serviceAccount = parsed;
+          usedSource = candidate.source;
+          break;
+        }
+      }
+    }
+
+    if (!serviceAccount) {
+      firebaseInitError = "No valid Firebase service account found.";
+      console.warn(
+        "[Firebase] Tidak ada service account valid. FCM akan dinonaktifkan sampai credential tersedia.",
+      );
+      return;
+    }
+
+    const apps = Array.isArray(admin.apps) ? admin.apps : [];
+    if (apps.length === 0) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    }
+
+    firebaseAdmin = admin;
+    firebaseAvailable = true;
+    firebaseInitError = null;
+    console.log(`[Firebase] Firebase Admin aktif via ${usedSource}.`);
+  } catch (e) {
+    firebaseInitError = e.message;
+    console.error("[Firebase] GAGAL TOTAL Inisialisasi:", e.message);
+  }
+}
+initializeFirebaseAdmin();
+
 // Load environment variables from .env (optional)
 try {
   require("dotenv").config();
@@ -351,26 +424,34 @@ function saveDevices(devices) {
 
 async function sendFCMNotificationToDevices(payload) {
   if (!firebaseAvailable || !firebaseAdmin) {
-    console.log("[Firebase] Gagal kirim: Firebase tidak aktif.");
+    console.warn(
+      "[Firebase] Gagal kirim: Firebase tidak aktif. Cek service account/credential.",
+    );
     return;
   }
+
   try {
     const devices = loadDevices();
-    const tokens = devices.map((d) => d.token).filter(Boolean);
+    const tokens = Array.from(
+      new Set(
+        devices
+          .map((d) => String(d && d.token ? d.token : "").trim())
+          .filter(Boolean),
+      ),
+    );
 
     if (!tokens.length) {
-      console.log("[Firebase] Tidak ada token HP terdaftar.");
+      console.log("[Firebase] Tidak ada token HP terdaftar di devices.json.");
       return;
     }
 
     console.log(
-      `[Firebase] Mengirim notifikasi ke ${tokens.length} HP satu per satu...`,
+      `[Firebase] Mengirim notifikasi ke ${tokens.length} token terdaftar...`,
     );
 
-    // Kirim satu per satu untuk menghindari error 404 /batch (Metode V1 Terbaru)
-    const sendPromises = tokens.map((token) => {
+    const sendPromises = tokens.map(async (token) => {
       const message = {
-        token: token,
+        token,
         notification: {
           title: payload.title || "KOPRAL POS",
           body: payload.body || "Ada notifikasi baru",
@@ -378,7 +459,7 @@ async function sendFCMNotificationToDevices(payload) {
         android: {
           priority: "high",
           notification: {
-            channelId: "push-notification-channel-id", // Sesuai MainActivity.java
+            channelId: "push-notification-channel-id",
             sound: "notification",
             visibility: "public",
           },
@@ -386,11 +467,16 @@ async function sendFCMNotificationToDevices(payload) {
         data: payload.data || {},
       };
 
-      return firebaseAdmin
-        .messaging()
-        .send(message)
-        .then((res) => ({ success: true, token }))
-        .catch((err) => ({ success: false, token, error: err.message }));
+      try {
+        await firebaseAdmin.messaging().send(message);
+        return { success: true, token };
+      } catch (err) {
+        const errorMessage = err && err.message ? err.message : String(err);
+        console.warn(
+          `[Firebase] Gagal kirim ke token ${token.slice(0, 12)}...: ${errorMessage}`,
+        );
+        return { success: false, token, error: errorMessage };
+      }
     });
 
     const results = await Promise.all(sendPromises);
@@ -401,18 +487,21 @@ async function sendFCMNotificationToDevices(payload) {
       `[Firebase] Selesai: ${successCount} Berhasil, ${failureCount} Gagal.`,
     );
 
-    // Bersihkan token mati jika terdeteksi
     const invalidTokens = results.filter(
       (r) =>
         !r.success &&
-        (r.error.includes("not-registered") || r.error.includes("not-found")),
+        (r.error.includes("not-registered") ||
+          r.error.includes("not-found") ||
+          r.error.includes("invalid-registration-token")),
     );
+
     if (invalidTokens.length > 0) {
       console.log(
-        `[Firebase] Membersihkan ${invalidTokens.length} token mati...`,
+        `[Firebase] Membersihkan ${invalidTokens.length} token mati/invalid...`,
       );
       const aliveDevices = devices.filter(
-        (d) => !invalidTokens.find((it) => it.token === d.token),
+        (device) =>
+          !invalidTokens.find((it) => String(device.token || "") === it.token),
       );
       saveDevices(aliveDevices);
     }
@@ -683,19 +772,30 @@ app.post("/api/pesanan-masuk", (req, res) => {
 app.post("/register-device", (req, res) => {
   try {
     const { token, platform, meta } = req.body || {};
-    if (!token)
+    const cleanedToken = String(token || "").trim();
+    if (!cleanedToken) {
       return res.status(400).json({ success: false, error: "token-required" });
+    }
+
     const devices = loadDevices();
-    const exists = devices.find((d) => d.token === token);
+    const exists = devices.find((d) => String(d.token || "") === cleanedToken);
     if (!exists) {
       devices.push({
-        token,
+        token: cleanedToken,
         platform: platform || "unknown",
         meta: meta || {},
         addedAt: new Date().toISOString(),
       });
       saveDevices(devices);
+      console.log(
+        `[Firebase] Device token tersimpan: ${cleanedToken.slice(0, 20)}...`,
+      );
+    } else {
+      console.log(
+        `[Firebase] Device token sudah ada: ${cleanedToken.slice(0, 20)}...`,
+      );
     }
+
     res.status(201).json({ success: true });
   } catch (e) {
     console.error("[Firebase] register-device error:", e);
