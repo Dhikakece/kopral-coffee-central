@@ -1258,6 +1258,24 @@
           </button>
 
           <button
+            id="btn-modal-awal"
+            onclick="toggleModalAwalKedai(true)"
+            class="nav-btn bg-gradient-to-r from-sky-500 to-cyan-400 text-slate-950"
+          >
+            <i class="fas fa-coins"></i>
+            Modal Awal
+          </button>
+
+          <button
+            id="btn-hitung"
+            onclick="toggleHitungModal(true)"
+            class="nav-btn bg-gradient-to-r from-orange-500 to-amber-400 text-slate-950"
+          >
+            <i class="fas fa-calculator"></i>
+            Hitung
+          </button>
+
+          <button
             onclick="toggleModal(true)"
             class="nav-btn bg-slate-700 text-white/90"
           >
@@ -1501,6 +1519,347 @@
             id="popup-riwayat-content"
             class="max-h-[70dvh] overflow-y-auto pr-2 custom-scrollbar space-y-3"
           ></div>
+        </div>
+      </div>
+
+      <div
+        id="modal-awal-kedai"
+        class="fixed inset-0 z-[75] hidden items-center justify-center p-3 bg-slate-950/70 backdrop-blur-sm"
+      >
+        <div
+          onclick="toggleModalAwalKedai(false)"
+          class="absolute inset-0"
+        ></div>
+        <div
+          class="relative w-full max-w-sm rounded-[1.5rem] border border-white/10 bg-slate-900/95 p-4 shadow-2xl"
+        >
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h3
+                class="text-base font-bold text-white flex items-center gap-2"
+              >
+                <i class="fas fa-coins text-sky-400"></i> Modal Awal Kedai
+              </h3>
+              <p class="text-slate-400 text-[11px] mt-1">
+                Simpan modal awal biaya operasional kedai secara terpisah.
+              </p>
+            </div>
+            <button
+              onclick="toggleModalAwalKedai(false)"
+              class="rounded-full border border-slate-700 bg-slate-800/70 p-2 text-slate-300 transition hover:text-white"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div
+              class="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3"
+            >
+              <p
+                class="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400"
+              >
+                Total Omzet Bersih
+              </p>
+              <div
+                id="modal-awal-total-omzet-bersih"
+                class="mt-1 text-xl font-black text-white"
+              >
+                Rp 0
+              </div>
+            </div>
+
+            <div class="rounded-2xl border border-sky-500/20 bg-sky-500/10 p-3">
+              <div class="flex items-center justify-between gap-2">
+                <p
+                  class="text-[10px] font-bold uppercase tracking-[0.2em] text-sky-400"
+                >
+                  Modal Biaya Awal
+                </p>
+                <button
+                  id="btn-edit-modal-awal"
+                  type="button"
+                  onclick="aktifkanEditModalAwal()"
+                  class="rounded-full border border-sky-500/30 bg-sky-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-300"
+                >
+                  <i class="fas fa-edit mr-1"></i> Edit
+                </button>
+              </div>
+              <div
+                id="modal-awal-total-tersimpan"
+                onclick="aktifkanEditModalAwal()"
+                class="mt-1 cursor-pointer text-xl font-black text-white"
+              >
+                Rp 0
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label
+                for="input-modal-awal-kedai"
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500"
+              >
+                Nominal Modal Awal
+              </label>
+              <input
+                id="input-modal-awal-kedai"
+                type="number"
+                inputmode="numeric"
+                min="0"
+                placeholder="Contoh: 5000000"
+                oninput="renderTotalModalAwalTersimpan()"
+                class="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-white outline-none transition focus:border-sky-500"
+              />
+            </div>
+
+            <div class="grid gap-2">
+              <button
+                onclick="simpanModalAwalKedai()"
+                class="w-full rounded-2xl bg-gradient-to-r from-sky-500 to-cyan-400 px-3 py-2.5 text-sm font-black uppercase tracking-[0.16em] text-slate-950 shadow-lg shadow-sky-500/20"
+              >
+                <i class="fas fa-save mr-2"></i> Simpan
+              </button>
+              <button
+                type="button"
+                onclick="konfirmasiResetModalAwalKedai()"
+                class="w-full rounded-2xl border border-rose-500/30 bg-rose-500/10 px-3 py-2.5 text-sm font-black uppercase tracking-[0.16em] text-rose-300 shadow-lg shadow-rose-500/10"
+              >
+                <i class="fas fa-rotate-left mr-2"></i> Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="modal-hitung"
+        class="fixed inset-0 z-[70] hidden items-center justify-center p-3 bg-slate-950/70 backdrop-blur-sm"
+      >
+        <div onclick="toggleHitungModal(false)" class="absolute inset-0"></div>
+        <div
+          class="relative w-full max-w-sm rounded-[1.5rem] border border-white/10 bg-slate-900/95 p-4 shadow-2xl"
+        >
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h3
+                class="text-base font-bold text-white flex items-center gap-2"
+              >
+                <i class="fas fa-calculator text-orange-400"></i> Hitung Selisih
+              </h3>
+              <p class="text-slate-400 text-[11px] mt-1">
+                Omzet dan pengeluaran dipilih per tanggal.
+              </p>
+            </div>
+            <button
+              onclick="toggleHitungModal(false)"
+              class="rounded-full border border-slate-700 bg-slate-800/70 p-2 text-slate-300 transition hover:text-white"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div
+              class="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3"
+            >
+              <p
+                class="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-400"
+              >
+                Total Omzet Pesanan
+              </p>
+              <div
+                id="hitung-omzet-value"
+                class="mt-1 text-xl font-black text-white"
+              >
+                Rp 0
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label
+                for="input-tanggal-hitung"
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500"
+              >
+                Filter Tanggal
+              </label>
+              <input
+                id="input-tanggal-hitung"
+                type="date"
+                onchange="sinkronkanHitungTanggal()"
+                class="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-white outline-none transition focus:border-orange-500"
+              />
+            </div>
+
+            <div class="space-y-2">
+              <label
+                for="input-pengeluaran-keterangan"
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500"
+              >
+                Keterangan Pengeluaran
+              </label>
+              <input
+                id="input-pengeluaran-keterangan"
+                type="text"
+                placeholder="Contoh: beli susu"
+                class="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-white outline-none transition focus:border-orange-500"
+              />
+            </div>
+
+            <div class="space-y-2">
+              <label
+                for="input-pengeluaran"
+                class="block text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500"
+              >
+                Nominal Pengeluaran
+              </label>
+              <div class="flex gap-2">
+                <input
+                  id="input-pengeluaran"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  placeholder="Contoh: 1200000"
+                  class="w-full rounded-2xl border border-slate-700 bg-slate-950/80 px-3 py-2.5 text-sm text-white outline-none transition focus:border-orange-500"
+                />
+                <button
+                  onclick="tambahkanPengeluaran()"
+                  class="rounded-2xl bg-slate-800 px-3 py-2.5 text-sm font-bold text-white transition hover:bg-slate-700"
+                >
+                  <i class="fas fa-plus"></i>
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3"
+            >
+              <p
+                class="text-[10px] font-bold uppercase tracking-[0.2em] text-rose-400"
+              >
+                Total Pengeluaran
+              </p>
+              <div
+                id="total-pengeluaran-value"
+                class="mt-1 text-xl font-black text-white"
+              >
+                Rp 0
+              </div>
+            </div>
+
+            <div
+              id="daftar-pengeluaran"
+              class="max-h-32 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-950/50 p-2"
+            ></div>
+
+            <div class="grid gap-2">
+              <button
+                onclick="hitungSelisihPengeluaran()"
+                class="w-full rounded-2xl bg-gradient-to-r from-orange-500 to-amber-400 px-3 py-2.5 text-sm font-black uppercase tracking-[0.16em] text-slate-950 shadow-lg shadow-orange-500/20"
+              >
+                <i class="fas fa-play mr-2"></i> Hitung Hari Ini
+              </button>
+              <button
+                id="btn-hitung-30-hari"
+                onclick="togglePopupHasil30Hari(true)"
+                class="w-full rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-3 py-2.5 text-sm font-black uppercase tracking-[0.16em] text-cyan-300 shadow-lg shadow-cyan-500/10"
+              >
+                <i class="fas fa-history mr-2"></i> Hitung 30 Hari
+              </button>
+            </div>
+
+            <div
+              id="hasil-hitung-card"
+              class="hidden rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3"
+            >
+              <p
+                class="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400"
+              >
+                Hasil
+              </p>
+              <div
+                id="hasil-hitung-value"
+                class="mt-1 text-xl font-black text-white"
+              >
+                Rp 0
+              </div>
+              <p
+                id="hasil-hitung-caption"
+                class="mt-1 text-[12px] text-slate-400"
+              >
+                Silakan isi total pengeluaran untuk melihat hasilnya.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        id="popup-hasil-30-hari"
+        class="fixed inset-0 z-[80] hidden items-center justify-center p-3 bg-slate-950/70 backdrop-blur-sm"
+      >
+        <div
+          onclick="togglePopupHasil30Hari(false)"
+          class="absolute inset-0"
+        ></div>
+        <div
+          class="relative w-full max-w-sm rounded-[1.5rem] border border-white/10 bg-slate-900/95 p-4 shadow-2xl"
+        >
+          <div class="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h3
+                class="text-base font-bold text-white flex items-center gap-2"
+              >
+                <i class="fas fa-history text-cyan-400"></i> Hasil 30 Hari
+              </h3>
+              <p class="text-slate-400 text-[11px] mt-1">
+                Total keseluruhan omzet pesanan dikurangi pengeluaran selama 30
+                hari.
+              </p>
+            </div>
+            <button
+              onclick="togglePopupHasil30Hari(false)"
+              class="rounded-full border border-slate-700 bg-slate-800/70 p-2 text-slate-300 transition hover:text-white"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div
+              class="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3"
+            >
+              <p
+                class="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400"
+              >
+                Total LABA KOTOR
+              </p>
+              <div
+                id="hasil-30-hari-value"
+                class="mt-1 text-xl font-black text-white"
+              >
+                Rp 0
+              </div>
+            </div>
+            <div
+              class="rounded-2xl border border-slate-700 bg-slate-950/50 p-3 text-[12px] text-slate-400"
+            >
+              <div class="flex justify-between">
+                <span>Total omzet 30 hari</span>
+                <span id="hasil-30-hari-omzet">Rp 0</span>
+              </div>
+              <div class="flex justify-between mt-2">
+                <span>Total pengeluaran 30 hari</span>
+                <span id="hasil-30-hari-pengeluaran">Rp 0</span>
+              </div>
+            </div>
+
+            <button
+              onclick="simpanHasil30HariKeModalAwal()"
+              class="w-full rounded-2xl bg-gradient-to-r from-emerald-500 to-lime-400 px-3 py-2.5 text-sm font-black uppercase tracking-[0.16em] text-slate-950 shadow-lg shadow-emerald-500/20"
+            >
+              <i class="fas fa-paper-plane mr-2"></i> Akumulasikan
+            </button>
+          </div>
         </div>
       </div>
 
