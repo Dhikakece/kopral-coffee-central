@@ -804,25 +804,42 @@ app.post("/api/pesanan-masuk", (req, res) => {
 // Register device token from Capacitor/Firebase clients
 app.post("/register-device", (req, res) => {
   try {
-    const { token, platform, meta } = req.body || {};
-    const cleanedToken = String(token || "").trim();
+    const { token, fcmToken, deviceToken, socketId, platform, meta } =
+      req.body || {};
+    const cleanedToken = String(token || fcmToken || deviceToken || "").trim();
+    const cleanedSocketId = String(socketId || meta?.socketId || "").trim();
+
     if (!cleanedToken) {
       return res.status(400).json({ success: false, error: "token-required" });
     }
 
     const devices = loadDevices();
-    const exists = devices.find((d) => String(d.token || "") === cleanedToken);
+    const exists = devices.find(
+      (d) =>
+        getDeviceFcmToken(d) === cleanedToken ||
+        String(d.socketId || "") === cleanedSocketId,
+    );
+
     if (!exists) {
       devices.push({
         token: cleanedToken,
+        fcmToken: cleanedToken,
+        deviceToken: cleanedToken,
+        socketId: cleanedSocketId || undefined,
         platform: platform || "unknown",
-        meta: meta || {},
+        meta: {
+          ...(meta || {}),
+          ...(cleanedSocketId ? { socketId: cleanedSocketId } : {}),
+        },
         addedAt: new Date().toISOString(),
       });
       saveDevices(devices);
       console.log(
         `[Firebase] Device token tersimpan: ${cleanedToken.slice(0, 20)}...`,
       );
+      if (cleanedSocketId) {
+        console.log(`[Socket] Socket client id tersimpan: ${cleanedSocketId}`);
+      }
     } else {
       console.log(
         `[Firebase] Device token sudah ada: ${cleanedToken.slice(0, 20)}...`,
