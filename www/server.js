@@ -110,6 +110,28 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("modal-awal-realtime-update", (payload) => {
+    try {
+      const state = payload?.state || payload || {};
+      const action = payload?.action || "sync";
+      const updatePayload = {
+        action,
+        state,
+        updatedAt: new Date().toISOString(),
+        sourceRole:
+          String(payload?.sourceRole || payload?.role || "global").trim() ||
+          "global",
+      };
+      console.log(
+        "[Socket] Modal awal changed, broadcasting to clients:",
+        updatePayload.sourceRole,
+      );
+      io.emit("modal-awal-realtime-update", updatePayload);
+    } catch (e) {
+      console.error("[Socket] Error processing modal-awal-realtime-update:", e);
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("[Socket] Client disconnected:", socket.id);
   });
@@ -135,6 +157,7 @@ app.use((req, res, next) => {
 const DATA_PATH = path.join(__dirname, "data", "stock.json");
 const RIWAYAT_PATH = path.join(__dirname, "data", "riwayat.json");
 const PENGELUARAN_PATH = path.join(__dirname, "data", "pengeluaran.json");
+const MODAL_AWAL_PATH = path.join(__dirname, "data", "modal-awal.json");
 const PAYMENTS_PATH = path.join(__dirname, "data", "payments.json");
 const SUBSCRIPTIONS_PATH = path.join(__dirname, "data", "subscriptions.json");
 
@@ -172,6 +195,40 @@ function savePengeluaranData(list) {
   } catch (e) {
     console.error("[Server] Gagal menyimpan data pengeluaran:", e);
     return [];
+  }
+}
+
+function loadModalAwalData() {
+  try {
+    if (!fs.existsSync(MODAL_AWAL_PATH)) {
+      fs.writeFileSync(MODAL_AWAL_PATH, JSON.stringify({ state: {} }, null, 2));
+      return { state: {} };
+    }
+    const raw = fs.readFileSync(MODAL_AWAL_PATH, "utf8");
+    const parsed = JSON.parse(raw || "{}");
+    if (parsed && typeof parsed === "object") {
+      return parsed;
+    }
+    return { state: {} };
+  } catch (e) {
+    console.error("[Server] Gagal membaca data modal awal:", e);
+    return { state: {} };
+  }
+}
+
+function saveModalAwalData(payload) {
+  try {
+    const normalized = {
+      action: payload?.action || "sync",
+      state: payload?.state || {},
+      updatedAt: payload?.updatedAt || new Date().toISOString(),
+      sourceRole: payload?.sourceRole || "global",
+    };
+    fs.writeFileSync(MODAL_AWAL_PATH, JSON.stringify(normalized, null, 2));
+    return normalized;
+  } catch (e) {
+    console.error("[Server] Gagal menyimpan data modal awal:", e);
+    return { state: {} };
   }
 }
 
@@ -1078,6 +1135,42 @@ app.post("/api/pengeluaran", (req, res) => {
     });
   } catch (e) {
     console.error("[Server] Error /api/pengeluaran:", e);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+});
+
+app.get("/api/modal-awal", (req, res) => {
+  try {
+    const stored = loadModalAwalData();
+    return res.status(200).json({ success: true, ...stored });
+  } catch (e) {
+    console.error("[Server] Error /api/modal-awal:", e);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+});
+
+app.post("/api/modal-awal", (req, res) => {
+  try {
+    const payload = req.body || {};
+    const state = payload?.state || {};
+    const action = payload?.action || "sync";
+    const updatePayload = {
+      action,
+      state,
+      updatedAt: new Date().toISOString(),
+      sourceRole:
+        String(payload?.sourceRole || payload?.role || "global").trim() ||
+        "global",
+    };
+    saveModalAwalData(updatePayload);
+    io.emit("modal-awal-realtime-update", updatePayload);
+    return res.status(200).json({ success: true, state, action });
+  } catch (e) {
+    console.error("[Server] Error /api/modal-awal:", e);
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });
