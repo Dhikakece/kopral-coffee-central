@@ -12,6 +12,130 @@ const HITUNG_TRIGGER_DAYS = 30;
 const HITUNG_INITIAL_MODAL_KEY = "kopral_modal_awal_kedai";
 const HITUNG_TOTAL_OMZET_BERSIH_KEY = "kopral_total_omzet_bersih";
 const HITUNG_SELESAH_SNAPSHOT_KEY = "kopral_hitung_selisih_snapshot";
+const MODAL_AWAL_SYNC_EVENT = "modal-awal-realtime-update";
+
+function buildModalAwalStateSnapshot() {
+  const initialModalValue = localStorage.getItem(HITUNG_INITIAL_MODAL_KEY);
+  const totalOmzetValue = localStorage.getItem(HITUNG_TOTAL_OMZET_BERSIH_KEY);
+  const triggerStartedAtValue = localStorage.getItem(HITUNG_TRIGGER_START_KEY);
+  const triggerSeenValue =
+    localStorage.getItem(HITUNG_TRIGGER_SEEN_KEY) === "true";
+  return {
+    initialModal:
+      initialModalValue === null || initialModalValue === ""
+        ? null
+        : String(initialModalValue),
+    totalOmzetBersih:
+      totalOmzetValue === null || totalOmzetValue === ""
+        ? null
+        : String(totalOmzetValue),
+    triggerStartedAt: triggerStartedAtValue || null,
+    triggerSeen: triggerSeenValue,
+  };
+}
+
+async function persistModalAwalToServer(payload = {}) {
+  try {
+    const backend =
+      typeof KOPRAL_BACKEND !== "undefined"
+        ? KOPRAL_BACKEND
+        : window.location.origin;
+    const state = payload?.state || buildModalAwalStateSnapshot();
+    const response = await fetch(`${backend}/api/modal-awal`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: payload?.action || "sync",
+        state,
+        sourceRole:
+          sessionStorage.getItem("kopral_role") ||
+          localStorage.getItem("kopral_role") ||
+          "admin",
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return await response.json().catch(() => null);
+  } catch (error) {
+    console.warn("[Modal Awal] Gagal sinkronisasi ke server:", error);
+    return null;
+  }
+}
+
+async function syncModalAwalFromServer() {
+  try {
+    const backend =
+      typeof KOPRAL_BACKEND !== "undefined"
+        ? KOPRAL_BACKEND
+        : window.location.origin;
+    const response = await fetch(`${backend}/api/modal-awal`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    if (data?.success) {
+      applyRemoteModalAwalUpdate(data.state || data);
+    }
+  } catch (error) {
+    console.warn("[Modal Awal] Gagal mengambil state dari server:", error);
+  }
+}
+
+function applyRemoteModalAwalUpdate(update) {
+  if (!update) return;
+  const action = update?.action || update?.state?.action || "sync";
+  const state = update?.state || update || {};
+
+  if (action === "reset") {
+    localStorage.removeItem(HITUNG_INITIAL_MODAL_KEY);
+    localStorage.removeItem(HITUNG_TOTAL_OMZET_BERSIH_KEY);
+    localStorage.removeItem(HITUNG_TRIGGER_START_KEY);
+    localStorage.removeItem(HITUNG_TRIGGER_SEEN_KEY);
+  } else {
+    if (state?.initialModal !== undefined && state?.initialModal !== null) {
+      localStorage.setItem(
+        HITUNG_INITIAL_MODAL_KEY,
+        String(state.initialModal),
+      );
+    } else {
+      localStorage.removeItem(HITUNG_INITIAL_MODAL_KEY);
+    }
+
+    if (
+      state?.totalOmzetBersih !== undefined &&
+      state?.totalOmzetBersih !== null
+    ) {
+      localStorage.setItem(
+        HITUNG_TOTAL_OMZET_BERSIH_KEY,
+        String(state.totalOmzetBersih),
+      );
+    } else {
+      localStorage.removeItem(HITUNG_TOTAL_OMZET_BERSIH_KEY);
+    }
+
+    if (state?.triggerStartedAt) {
+      localStorage.setItem(HITUNG_TRIGGER_START_KEY, state.triggerStartedAt);
+    } else {
+      localStorage.removeItem(HITUNG_TRIGGER_START_KEY);
+    }
+
+    if (state?.triggerSeen) {
+      localStorage.setItem(HITUNG_TRIGGER_SEEN_KEY, "true");
+    } else {
+      localStorage.removeItem(HITUNG_TRIGGER_SEEN_KEY);
+    }
+  }
+
+  aturModeEditModalAwal(false);
+  renderModalAwalKedaiFromStorage();
+  const omzetBersihDisplay = document.getElementById(
+    "modal-awal-total-omzet-bersih",
+  );
+  if (action === "reset" && omzetBersihDisplay) {
+    omzetBersihDisplay.textContent = "Rp 0";
+    omzetBersihDisplay.classList.remove("text-rose-400", "text-emerald-400");
+    omzetBersihDisplay.classList.add("text-white");
+  }
+}
 
 function getHitungTriggerStartDate() {
   const stored = localStorage.getItem(HITUNG_TRIGGER_START_KEY);
@@ -341,6 +465,10 @@ function simpanHasil30HariKeModalAwal() {
   const hasilAkhir = totalLabaKotor - modalAwal;
 
   localStorage.setItem(HITUNG_TOTAL_OMZET_BERSIH_KEY, String(hasilAkhir));
+  persistModalAwalToServer({
+    action: "sync-result",
+    state: buildModalAwalStateSnapshot(),
+  }).catch(() => {});
   renderTotalOmzetBersihModalAwal();
   Swal.fire({
     icon: "success",
@@ -377,6 +505,11 @@ function resetModalAwalKedai() {
   if (omzetBersihDisplay) {
     omzetBersihDisplay.textContent = "Rp 0";
   }
+
+  persistModalAwalToServer({
+    action: "reset",
+    state: buildModalAwalStateSnapshot(),
+  }).catch(() => {});
 
   Swal.fire({
     icon: "success",
@@ -443,6 +576,10 @@ function simpanModalAwalKedai() {
   input.value = String(Math.max(0, nextTotal));
   aturModeEditModalAwal(false);
   renderModalAwalKedaiFromStorage();
+  persistModalAwalToServer({
+    action: "save",
+    state: buildModalAwalStateSnapshot(),
+  }).catch(() => {});
 
   Swal.fire({
     icon: "success",
@@ -1304,6 +1441,7 @@ async function startApp() {
       syncPendingOrdersFromServer().catch(() => {});
       syncStockFromServer().catch(() => {});
       syncPengeluaranFromServer().catch(() => {});
+      syncModalAwalFromServer().catch(() => {});
       // Identifikasi role ke server agar bisa bergabung di room khusus
       try {
         const role =
@@ -1351,6 +1489,9 @@ async function startApp() {
     });
     socket.on("pengeluaran-realtime-update", (update) => {
       applyRemotePengeluaranUpdate(update);
+    });
+    socket.on(MODAL_AWAL_SYNC_EVENT, (update) => {
+      applyRemoteModalAwalUpdate(update);
     });
     socket.on("notifikasi-pesanan-baru", (pesanan) => {
       pesanan.timestamp = pesanan.timestamp || new Date().getTime();
