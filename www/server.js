@@ -96,10 +96,13 @@ io.on("connection", (socket) => {
         sourceRole:
           String(payload?.sourceRole || payload?.role || "global").trim() ||
           "global",
+        action: payload?.action || "sync",
       };
       console.log(
         "[Socket] Pengeluaran changed, broadcasting to clients:",
         updatePayload.sourceRole,
+        "action:",
+        updatePayload.action,
       );
       io.emit("pengeluaran-realtime-update", updatePayload);
     } catch (e) {
