@@ -1019,8 +1019,23 @@ function showRealtimeStockAlert(item, previousStock, nextStock) {
         },
       });
     }
+
+    // KIRIM NOTIFIKASI KE SISTEM ANDROID (Spanduk & Suara Stok Habis)
+    const LocalNotifications = window.Capacitor?.Plugins?.LocalNotifications;
+    if (LocalNotifications) {
+      LocalNotifications.schedule({
+        notifications: [
+          {
+            title: "STOK HABIS!",
+            body: `${label} sudah habis stok.`,
+            id: Math.floor(Math.random() * 1000),
+            channelId: "stock-notification-channel-id", // Menggunakan sound stok_habis
+          },
+        ],
+      });
+    }
   } catch (e) {
-    console.warn("[Stock] Swal not available for fallback notification:", e);
+    console.warn("[Stock] Gagal mengirim notifikasi sistem:", e);
   }
 
   window.clearTimeout(showRealtimeStockAlert._showTimer);
@@ -1385,6 +1400,26 @@ function showClosingWarning() {
     confirmButtonText: "Siap, Mengerti!",
     allowOutsideClick: false,
   });
+
+  // KIRIM NOTIFIKASI KE SISTEM ANDROID (Spanduk & Suara Warning)
+  try {
+    const LocalNotifications = window.Capacitor?.Plugins?.LocalNotifications;
+    if (LocalNotifications) {
+      LocalNotifications.schedule({
+        notifications: [
+          {
+            title: "⚠️ PERINGATAN TUTUP HARI",
+            body: "Sudah mendekati jam 00:00! Segera selesaikan pesanan.",
+            id: 1001,
+            channelId: "warning-notification-channel-id", // Pakai channel suara warning
+          },
+        ],
+      });
+    }
+  } catch (e) {
+    console.warn("[Closing] Gagal mengirim notifikasi sistem:", e);
+  }
+
   warningShown = true;
 }
 
