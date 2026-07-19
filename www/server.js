@@ -68,8 +68,45 @@ io.on("connection", (socket) => {
         name: produk.name,
         stock: produk.stock,
       });
+
+      if (produk.stock <= 0) {
+        io.emit("stok-habis-realtime", {
+          id: produk.id,
+          name: produk.name,
+          stock: produk.stock,
+          message: `${produk.name} telah habis stok.`,
+        });
+      }
     } catch (e) {
       console.error("[Socket] Error processing update-stok-realtime:", e);
+    }
+  });
+
+  socket.on("pengeluaran-realtime-update", (payload) => {
+    try {
+      const list = Array.isArray(payload?.list)
+        ? payload.list
+        : Array.isArray(payload?.pengeluaran)
+          ? payload.pengeluaran
+          : [];
+      const saved = savePengeluaranData(list);
+      const updatePayload = {
+        list: saved,
+        updatedAt: new Date().toISOString(),
+        sourceRole:
+          String(payload?.sourceRole || payload?.role || "global").trim() ||
+          "global",
+      };
+      console.log(
+        "[Socket] Pengeluaran changed, broadcasting to clients:",
+        updatePayload.sourceRole,
+      );
+      io.emit("pengeluaran-realtime-update", updatePayload);
+    } catch (e) {
+      console.error(
+        "[Socket] Error processing pengeluaran-realtime-update:",
+        e,
+      );
     }
   });
 
@@ -97,6 +134,7 @@ app.use((req, res, next) => {
 
 const DATA_PATH = path.join(__dirname, "data", "stock.json");
 const RIWAYAT_PATH = path.join(__dirname, "data", "riwayat.json");
+const PENGELUARAN_PATH = path.join(__dirname, "data", "pengeluaran.json");
 const PAYMENTS_PATH = path.join(__dirname, "data", "payments.json");
 const SUBSCRIPTIONS_PATH = path.join(__dirname, "data", "subscriptions.json");
 
@@ -110,6 +148,32 @@ const FIREBASE_SERVICE_ACCOUNT_PATH = path.join(
 let firebaseAdmin = null;
 let firebaseAvailable = false;
 let firebaseInitError = null;
+
+function loadPengeluaranData() {
+  try {
+    if (!fs.existsSync(PENGELUARAN_PATH)) {
+      fs.writeFileSync(PENGELUARAN_PATH, JSON.stringify([], null, 2));
+      return [];
+    }
+    const raw = fs.readFileSync(PENGELUARAN_PATH, "utf8");
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error("[Server] Gagal membaca data pengeluaran:", e);
+    return [];
+  }
+}
+
+function savePengeluaranData(list) {
+  try {
+    const normalized = Array.isArray(list) ? list : [];
+    fs.writeFileSync(PENGELUARAN_PATH, JSON.stringify(normalized, null, 2));
+    return normalized;
+  } catch (e) {
+    console.error("[Server] Gagal menyimpan data pengeluaran:", e);
+    return [];
+  }
+}
 
 function parseFirebaseServiceAccount(rawValue) {
   if (!rawValue) return null;
@@ -709,12 +773,21 @@ app.post("/api/pesanan-masuk", (req, res) => {
       const beforeStock = Number(produk.stock) || 0;
       const afterStock = Math.max(0, beforeStock - quantity);
       if (afterStock !== beforeStock) {
+        const transitionedToZero = beforeStock > 0 && afterStock <= 0;
         produk.stock = afterStock;
         stockCatalog[produk.id] = produk;
         updatedStocks.push(produk);
         console.log(
           `[Server] Dikurangi stok ${produk.name} (${produk.id}): ${beforeStock} -> ${afterStock}`,
         );
+        if (transitionedToZero) {
+          io.emit("stok-habis-realtime", {
+            id: produk.id,
+            name: produk.name,
+            stock: produk.stock,
+            message: `${produk.name} telah habis stok.`,
+          });
+        }
       }
     });
 
@@ -883,6 +956,15 @@ app.post("/update-stok", (req, res) => {
     stock: produk.stock,
   });
 
+  if (produk.stock <= 0) {
+    io.emit("stok-habis-realtime", {
+      id: produk.id,
+      name: produk.name,
+      stock: produk.stock,
+      message: `${produk.name} telah habis stok.`,
+    });
+  }
+
   res
     .status(200)
     .json({ success: true, message: "Stok berhasil disinkronkan." });
@@ -952,6 +1034,50 @@ app.post("/api/pesanan-selesai", (req, res) => {
       .json({ success: true, message: "Tercatat.", added: true });
   } catch (e) {
     console.error("[Server] Error /api/pesanan-selesai:", e);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+});
+
+// Ambil data pengeluaran yang disinkronkan antar perangkat
+app.get("/api/pengeluaran", (req, res) => {
+  try {
+    const role = String(req.query.role || "global").trim() || "global";
+    const pengeluaran = loadPengeluaranData();
+    return res.status(200).json({ success: true, role, pengeluaran });
+  } catch (e) {
+    console.error("[Server] Error /api/pengeluaran:", e);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+});
+
+app.post("/api/pengeluaran", (req, res) => {
+  try {
+    const payload = req.body || {};
+    const list = Array.isArray(payload?.list)
+      ? payload.list
+      : Array.isArray(payload?.pengeluaran)
+        ? payload.pengeluaran
+        : [];
+    const saved = savePengeluaranData(list);
+    const updatePayload = {
+      list: saved,
+      updatedAt: new Date().toISOString(),
+      sourceRole:
+        String(payload?.sourceRole || payload?.role || "global").trim() ||
+        "global",
+    };
+    io.emit("pengeluaran-realtime-update", updatePayload);
+    return res.status(200).json({
+      success: true,
+      pengeluaran: saved,
+      updatedAt: updatePayload.updatedAt,
+    });
+  } catch (e) {
+    console.error("[Server] Error /api/pengeluaran:", e);
     return res
       .status(500)
       .json({ success: false, message: "Internal server error" });
