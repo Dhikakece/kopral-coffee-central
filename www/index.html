@@ -1949,6 +1949,38 @@
         </div>
       </div>
 
+      <div
+        id="stock-alert-toast"
+        class="fixed bottom-4 right-4 z-[95] hidden max-w-[360px] items-start gap-3 rounded-[28px] border border-white/10 bg-slate-900/85 px-4 py-4 text-white shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl"
+      >
+        <div
+          class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-rose-500 text-lg shadow-lg shadow-amber-500/30"
+        >
+          <i class="fas fa-bell"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div
+            id="stock-alert-title"
+            class="text-[11px] font-black uppercase tracking-[0.28em] text-amber-300"
+          >
+            Stok Habis
+          </div>
+          <div
+            id="stock-alert-message"
+            class="mt-1 text-sm leading-5 text-slate-200"
+          >
+            Stok item telah habis.
+          </div>
+        </div>
+        <button
+          type="button"
+          onclick="this.parentElement.style.display = 'none'"
+          class="ml-1 rounded-full p-1 text-slate-400 transition hover:bg-white/10 hover:text-white"
+        >
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
       <main class="w-full p-6 max-w-7xl mx-auto relative z-10">
         <div class="flex items-center gap-3 mb-6">
           <h2 class="text-lg font-bold">Antrean Aktif</h2>
