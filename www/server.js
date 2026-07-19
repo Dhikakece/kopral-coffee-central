@@ -1051,13 +1051,18 @@ app.post("/api/pesanan-selesai", (req, res) => {
     }
 
     const sourceRole = String(dataPesanan.sourceRole || "").trim() || "global";
+    const normalizedRole = sourceRole
+      .replace(/[^a-z0-9_-]/gi, "_")
+      .toLowerCase();
 
     const riwayat = loadRiwayat(sourceRole);
     const exists = riwayat.some((r) => r.id_pesanan === dataPesanan.id_pesanan);
     if (exists) {
-      // Sudah tercatat, kirim broadcast hanya ke room role untuk sinkron
-      const room = sourceRole.replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
-      io.to(room).emit("notifikasi-pesanan-selesai", dataPesanan);
+      // Sudah tercatat, kirim broadcast hanya ke room role untuk sinkron antar perangkat role yang sama
+      io.to(normalizedRole).emit("notifikasi-pesanan-selesai", {
+        ...dataPesanan,
+        sourceRole,
+      });
       return res.status(200).json({
         success: true,
         message: "Sudah tercatat sebelumnya.",
@@ -1083,8 +1088,10 @@ app.post("/api/pesanan-selesai", (req, res) => {
     removePendingOrder(dataPesanan.id_pesanan);
 
     // Broadcast ke klien dengan role yang sama saja
-    const room = sourceRole.replace(/[^a-z0-9_-]/gi, "_").toLowerCase();
-    io.to(room).emit("notifikasi-pesanan-selesai", dataPesanan);
+    io.to(normalizedRole).emit("notifikasi-pesanan-selesai", {
+      ...dataPesanan,
+      sourceRole,
+    });
 
     return res
       .status(200)
