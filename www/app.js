@@ -1510,15 +1510,43 @@ async function startApp() {
           .catch(() => {});
       }
     });
-    // Terima notifikasi bahwa pesanan telah selesai dan tambahkan ke riwayat (jika belum ada)
+    // Terima notifikasi bahwa pesanan telah selesai dan sinkronkan antar perangkat role yang sama
     socket.on("notifikasi-pesanan-selesai", (pesanan) => {
       try {
+        const currentRole =
+          sessionStorage.getItem("kopral_role") ||
+          localStorage.getItem("kopral_role") ||
+          "admin";
+        const sourceRole = String(
+          pesanan?.sourceRole || pesanan?.role || "",
+        ).trim();
+        if (sourceRole && sourceRole !== currentRole) {
+          console.log(
+            `[Riwayat] Melewatkan pesanan selesai ${pesanan?.id_pesanan} karena sourceRole ${sourceRole} berbeda dari role aktif ${currentRole}`,
+          );
+          return;
+        }
+
+        if (pesanan?.id_pesanan) {
+          delete activeOrders[pesanan.id_pesanan];
+          localStorage.setItem(
+            "kopral_active_orders",
+            JSON.stringify(activeOrders),
+          );
+          renderActiveOrders();
+          updateIncomingOrderCounter();
+        }
+
         const riwayat = JSON.parse(
           localStorage.getItem("kopral_riwayat_data") || "[]",
         );
         const exists = riwayat.some((r) => r.id_pesanan === pesanan.id_pesanan);
         if (!exists) {
-          riwayat.unshift(pesanan);
+          riwayat.unshift({
+            ...(pesanan || {}),
+            timestamp: pesanan?.timestamp || new Date().getTime(),
+            sourceRole: sourceRole || currentRole,
+          });
           localStorage.setItem("kopral_riwayat_data", JSON.stringify(riwayat));
           console.log(
             "[Riwayat] Menambahkan pesanan selesai dari server:",
@@ -2787,13 +2815,17 @@ function renderDaftarPengeluaran() {
             </div>
             <div class="flex gap-1">
               <button
-                onclick="editPengeluaran(${safeIndex})"
+                type="button"
+                data-action="edit-pengeluaran"
+                data-index="${safeIndex}"
                 class="rounded-lg border border-slate-700 bg-slate-800 px-2 py-1 text-[10px] text-slate-300"
               >
                 <i class="fas fa-edit"></i>
               </button>
               <button
-                onclick="hapusPengeluaran(${safeIndex})"
+                type="button"
+                data-action="hapus-pengeluaran"
+                data-index="${safeIndex}"
                 class="rounded-lg border border-red-600/30 bg-red-500/10 px-2 py-1 text-[10px] text-red-400"
               >
                 <i class="fas fa-trash"></i>
@@ -2804,6 +2836,29 @@ function renderDaftarPengeluaran() {
       `;
     })
     .join("");
+
+  container.onclick = (event) => {
+    const editButton = event.target.closest(
+      'button[data-action="edit-pengeluaran"]',
+    );
+    if (editButton) {
+      const index = Number(editButton.dataset.index ?? -1);
+      if (Number.isFinite(index)) {
+        editPengeluaran(index);
+      }
+      return;
+    }
+
+    const deleteButton = event.target.closest(
+      'button[data-action="hapus-pengeluaran"]',
+    );
+    if (deleteButton) {
+      const index = Number(deleteButton.dataset.index ?? -1);
+      if (Number.isFinite(index)) {
+        hapusPengeluaran(index);
+      }
+    }
+  };
 }
 
 function tambahkanPengeluaran() {
@@ -2881,27 +2936,54 @@ function editPengeluaran(index) {
     if (!result.isConfirmed || !result.value) return;
     const oldNominal = parseRupiahValue(item.nominal || 0);
     const newNominal = parseRupiahValue(result.value.nominal || 0);
-    list[index] = {
+    const nextList = [...list];
+    nextList[index] = {
       ...item,
       keterangan: result.value.keterangan,
       nominal: newNominal,
     };
-    simpanDaftarPengeluaran(list);
-    persistPengeluaranToServer(list).catch(() => {});
+    simpanDaftarPengeluaran(nextList);
+    const role =
+      sessionStorage.getItem("kopral_role") ||
+      localStorage.getItem("kopral_role") ||
+      "admin";
+    if (socket?.connected) {
+      socket.emit("pengeluaran-realtime-update", {
+        list: nextList,
+        sourceRole: role,
+        action: "edit",
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    persistPengeluaranToServer(nextList, { action: "edit" }).catch(() => {});
     renderTotalPengeluaran();
     renderDaftarPengeluaran();
   });
 }
 
-function hapusPengeluaran(index) {
+async function hapusPengeluaran(index) {
   const list = getDaftarPengeluaran();
   if (index < 0 || index >= list.length) return;
   const item = list[index];
   if (!item) return;
 
-  list.splice(index, 1);
-  simpanDaftarPengeluaran(list);
-  persistPengeluaranToServer(list).catch(() => {});
+  const nextList = list.filter((_, idx) => idx !== index);
+  simpanDaftarPengeluaran(nextList);
+  const role =
+    sessionStorage.getItem("kopral_role") ||
+    localStorage.getItem("kopral_role") ||
+    "admin";
+  if (socket?.connected) {
+    socket.emit("pengeluaran-realtime-update", {
+      list: nextList,
+      sourceRole: role,
+      action: "delete",
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  await persistPengeluaranToServer(nextList, { action: "delete" }).catch(
+    () => {},
+  );
   renderTotalPengeluaran();
   renderDaftarPengeluaran();
 }
