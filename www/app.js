@@ -2744,6 +2744,13 @@ function applyRemotePengeluaranUpdate(update) {
   if (modal && modal.classList.contains("flex")) {
     hitungSelisihPengeluaran();
   }
+  if (update?.action === "delete") {
+    const tanggal = getTanggalHitung();
+    if (tanggal) {
+      renderTotalPengeluaran();
+      renderDaftarPengeluaran();
+    }
+  }
 }
 
 function renderTotalPengeluaran() {
