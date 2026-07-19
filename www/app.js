@@ -222,11 +222,17 @@ function renderTotalModalAwalTersimpan() {
 
   const storedValue = localStorage.getItem(HITUNG_INITIAL_MODAL_KEY);
   if (storedValue === null || storedValue === "") {
+    display.textContent = "Rp 0";
     return;
   }
 
   const nilai = parseRupiahValue(storedValue);
   display.textContent = `Rp ${Math.max(0, nilai).toLocaleString("id-ID")}`;
+}
+
+function renderModalAwalKedaiFromStorage() {
+  renderTotalModalAwalTersimpan();
+  renderTotalOmzetBersihModalAwal();
 }
 
 function aturModeEditModalAwal(isEditing) {
@@ -246,7 +252,10 @@ function aturModeEditModalAwal(isEditing) {
     input.value = String(Math.max(0, nilai));
     input.focus();
   } else {
-    input.value = "";
+    const nilai = parseRupiahValue(
+      localStorage.getItem(HITUNG_INITIAL_MODAL_KEY) || "0",
+    );
+    input.value = nilai > 0 ? String(Math.max(0, nilai)) : "";
   }
 }
 
@@ -431,10 +440,9 @@ function simpanModalAwalKedai() {
   const nextTotal = isEditing ? value : savedTotal + value;
 
   localStorage.setItem(HITUNG_INITIAL_MODAL_KEY, String(nextTotal));
-  input.value = "";
+  input.value = String(Math.max(0, nextTotal));
   aturModeEditModalAwal(false);
-  renderTotalModalAwalTersimpan();
-  renderTotalOmzetBersihModalAwal();
+  renderModalAwalKedaiFromStorage();
 
   Swal.fire({
     icon: "success",
@@ -453,15 +461,11 @@ function toggleModalAwalKedai(show) {
   if (!modal || !input || !omzetDisplay) return;
 
   if (show) {
-    input.value = "";
     aturModeEditModalAwal(false);
-    renderTotalModalAwalTersimpan();
-    renderTotalOmzetBersihModalAwal();
+    renderModalAwalKedaiFromStorage();
     modal.classList.remove("hidden");
     modal.classList.add("flex");
   } else {
-    input.value = "";
-    aturModeEditModalAwal(false);
     modal.classList.add("hidden");
     modal.classList.remove("flex");
   }
@@ -779,6 +783,132 @@ if (!stockData || Object.keys(stockData).length === 0) {
 }
 localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stockData));
 
+function resolveStockEntry(input, fallbackName) {
+  if (!input && !fallbackName) return null;
+
+  const normalizedId =
+    typeof input === "object" && input !== null ? input.id : input;
+  const normalizedName =
+    typeof input === "object" && input !== null ? input.name : fallbackName;
+  const rawId = String(normalizedId || "").trim();
+  const rawName = String(normalizedName || "")
+    .trim()
+    .toLowerCase();
+
+  if (rawId && stockData[rawId]) {
+    return stockData[rawId];
+  }
+
+  if (!rawName) return null;
+
+  return (
+    Object.values(stockData).find((entry) => {
+      const targetName = String(entry?.name || "")
+        .trim()
+        .toLowerCase();
+      return targetName && targetName === rawName;
+    }) || null
+  );
+}
+
+function showRealtimeStockAlert(item, previousStock, nextStock) {
+  const safeStock = Number(nextStock);
+  console.log("[Stock] showRealtimeStockAlert called", {
+    item,
+    previousStock,
+    nextStock,
+  });
+
+  if (Number.isFinite(safeStock) && safeStock > 0) {
+    console.log("[Stock] Skip notif because stock > 0");
+    return;
+  }
+
+  let el = document.getElementById("stock-alert-toast");
+  let message = document.getElementById("stock-alert-message");
+  let title = document.getElementById("stock-alert-title");
+
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "stock-alert-toast";
+    el.className =
+      "fixed right-4 bottom-4 z-[95] hidden max-w-[360px] items-start gap-3 rounded-[28px] border border-white/10 bg-slate-900/85 px-4 py-4 text-white shadow-[0_30px_80px_rgba(0,0,0,0.45)] backdrop-blur-2xl";
+    el.innerHTML = `
+      <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-rose-500 text-lg shadow-lg shadow-amber-500/30">
+        <i class="fas fa-bell"></i>
+      </div>
+      <div class="min-w-0 flex-1">
+        <div id="stock-alert-title" class="text-[11px] font-black uppercase tracking-[0.28em] text-amber-300">Stok Habis</div>
+        <div id="stock-alert-message" class="mt-1 text-sm leading-5 text-slate-200">Item telah habis stok.</div>
+      </div>
+      <button type="button" onclick="this.parentElement.style.display='none'" class="ml-1 rounded-full p-1 text-slate-400 transition hover:bg-white/10 hover:text-white">
+        <i class="fas fa-times"></i>
+      </button>
+    `;
+    document.body.appendChild(el);
+    message = document.getElementById("stock-alert-message");
+    title = document.getElementById("stock-alert-title");
+  }
+
+  const label = item?.name || item?.id || "Item";
+  console.log("[Stock] Emitting stock-habis notif for", label);
+  if (message) {
+    message.textContent = `${label} telah habis stok.`;
+  }
+  if (title) {
+    title.textContent = "Stok Habis";
+  }
+
+  el.style.display = "flex";
+  el.style.opacity = "0";
+  el.style.transform = "translateY(16px) scale(0.96)";
+  el.classList.remove("hidden");
+  el.classList.add("flex");
+
+  try {
+    if (typeof Swal !== "undefined") {
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: `${label} telah habis stok.`,
+        showConfirmButton: false,
+        timer: 4200,
+        timerProgressBar: true,
+        background: "rgba(15, 23, 42, 0.95)",
+        color: "#f8fafc",
+        customClass: {
+          popup: "rounded-2xl shadow-2xl border border-white/10",
+        },
+      });
+    }
+  } catch (e) {
+    console.warn("[Stock] Swal not available for fallback notification:", e);
+  }
+
+  window.clearTimeout(showRealtimeStockAlert._showTimer);
+  window.clearTimeout(showRealtimeStockAlert._hideTimer);
+
+  showRealtimeStockAlert._showTimer = window.setTimeout(() => {
+    el.style.transition =
+      "opacity 280ms cubic-bezier(0.22, 1, 0.36, 1), transform 280ms cubic-bezier(0.22, 1, 0.36, 1)";
+    el.style.opacity = "1";
+    el.style.transform = "translateY(0) scale(1)";
+  }, 220);
+
+  showRealtimeStockAlert._hideTimer = window.setTimeout(() => {
+    el.style.transition =
+      "opacity 240ms cubic-bezier(0.22, 1, 0.36, 1), transform 240ms cubic-bezier(0.22, 1, 0.36, 1)";
+    el.style.opacity = "0";
+    el.style.transform = "translateY(12px) scale(0.94)";
+    window.setTimeout(() => {
+      el.style.display = "none";
+      el.classList.add("hidden");
+      el.classList.remove("flex");
+    }, 220);
+  }, 4200);
+}
+
 function updateItemDropdown() {
   const kategori = document.getElementById("select-kategori").value; // Mengambil nilai dari dropdown kategori
   const selectProduk = document.getElementById("select-produk"); // Dropdown produk
@@ -838,37 +968,88 @@ function updateStockStatus() {
 }
 
 function updateLocalStockState(id, stock, name) {
-  if (!id) return;
-  const existing = stockData[id] || { id, name: name || id, stock: 0 };
+  const lookup = typeof id === "object" && id ? id : { id, name };
+  const resolved = resolveStockEntry(lookup, name) || {
+    id: lookup?.id || id,
+    name: lookup?.name || name || id,
+    stock: 0,
+  };
+  const targetId = resolved?.id || lookup?.id || id;
+  const previousStock = Number(resolved.stock) || 0;
+  const nextStock = Number(stock);
+  const shouldAlert =
+    previousStock > 0 && Number.isFinite(nextStock) && nextStock <= 0;
   console.log(
-    `[Stock] Local update request for ${id} (${name || existing.name}): ${existing.stock} -> ${stock}`,
+    `[Stock] Local update request for ${targetId} (${name || resolved.name}): ${previousStock} -> ${nextStock}`,
+    {
+      targetId,
+      stockDataHasKey: Object.prototype.hasOwnProperty.call(
+        stockData,
+        targetId,
+      ),
+      matchedEntry: resolved
+        ? { id: resolved.id, name: resolved.name, stock: resolved.stock }
+        : null,
+    },
   );
-  existing.stock = Number(stock);
+  resolved.stock = Number.isFinite(nextStock) ? nextStock : previousStock;
   // mark local update time to avoid immediate remote overwrites
-  existing._lastLocalUpdate = new Date().getTime();
-  if (name) existing.name = name;
-  stockData[id] = existing;
+  resolved._lastLocalUpdate = new Date().getTime();
+  if (name) resolved.name = name;
+  if (targetId) {
+    stockData[targetId] = resolved;
+  }
   localStorage.setItem(STOCK_STORAGE_KEY, JSON.stringify(stockData));
   updateItemDropdown();
+  updateStockStatus();
+  if (shouldAlert) {
+    showRealtimeStockAlert(resolved, previousStock, resolved.stock);
+  }
 }
 
 function applyRemoteStockUpdate(update) {
   if (!update) return;
+  const targetId = update?.id || update?.name || null;
   console.log("[Stock] Remote update received:", update);
   try {
-    const existing = stockData[update.id];
+    const resolved =
+      resolveStockEntry(update, update?.name) || stockData[targetId] || null;
+    const existing = resolved || stockData[targetId] || null;
     const now = new Date().getTime();
+    const previousStock = Number(existing?.stock) || 0;
+    const nextStock = Number(update?.stock);
     if (existing && existing._lastLocalUpdate) {
       const delta = now - existing._lastLocalUpdate;
       // if local update was very recent (<=5s), ignore remote update to avoid race
       if (delta <= 5000) {
+        if (previousStock > 0 && Number.isFinite(nextStock) && nextStock <= 0) {
+          showRealtimeStockAlert(
+            {
+              id: existing.id || targetId,
+              name: existing.name || update?.name,
+            },
+            previousStock,
+            nextStock,
+          );
+        }
         console.warn(
-          `[Stock] Ignoring remote update for ${update.id} because of recent local change (${delta}ms)`,
+          `[Stock] Ignoring remote update for ${targetId} because of recent local change (${delta}ms)`,
         );
         return;
       }
     }
-    updateLocalStockState(update.id, update.stock, update.name);
+    updateLocalStockState(
+      existing?.id || targetId,
+      nextStock,
+      update?.name || existing?.name,
+    );
+    if (Number(nextStock) <= 0) {
+      showRealtimeStockAlert(
+        { id: existing?.id || targetId, name: update?.name || existing?.name },
+        previousStock,
+        Number(nextStock),
+      );
+    }
   } catch (e) {
     console.error("[Stock] Error applying remote update:", e);
   }
@@ -935,6 +1116,7 @@ function initializeApp() {
   loadPersistedOrders();
   updateItemDropdown();
   renderActiveOrders();
+  syncPengeluaranFromServer().catch(() => {});
   setInterval(checkClosingTime, 30000);
 
   setStatusOnline(navigator.onLine);
@@ -1121,6 +1303,7 @@ async function startApp() {
       updateStatus(true);
       syncPendingOrdersFromServer().catch(() => {});
       syncStockFromServer().catch(() => {});
+      syncPengeluaranFromServer().catch(() => {});
       // Identifikasi role ke server agar bisa bergabung di room khusus
       try {
         const role =
@@ -1155,6 +1338,19 @@ async function startApp() {
     socket.on("connect_error", () => updateStatus(false));
     socket.on("update-stok-realtime", (update) => {
       applyRemoteStockUpdate(update);
+    });
+    socket.on("stok-habis-realtime", (update) => {
+      const item = {
+        id: update?.id,
+        name: update?.name,
+        stock: Number(update?.stock) || 0,
+      };
+      showRealtimeStockAlert(item, 1, item.stock);
+      const audio = document.getElementById("warning-sound");
+      audio?.play?.().catch(() => {});
+    });
+    socket.on("pengeluaran-realtime-update", (update) => {
+      applyRemotePengeluaranUpdate(update);
     });
     socket.on("notifikasi-pesanan-baru", (pesanan) => {
       pesanan.timestamp = pesanan.timestamp || new Date().getTime();
@@ -1502,17 +1698,22 @@ async function selesaiPesanan(id) {
     } else if (doEmit) {
       // Lakukan pengurangan stok lokal lalu beri tahu server dengan nilai stok absolut
       items.forEach((item) => {
-        const stokItem = Object.values(stockData).find(
-          (stockEntry) =>
-            stockEntry.id === item.id || stockEntry.name === item.name,
-        );
+        const resolved =
+          resolveStockEntry(item) ||
+          Object.values(stockData).find(
+            (stockEntry) =>
+              stockEntry.id === item.id || stockEntry.name === item.name,
+          );
+        const stokItem = resolved;
         if (!stokItem) return;
 
         const before = Number(stokItem.stock) || 0;
         const qty = Number(item.quantity) || 0;
         const after = before - qty;
+        const shouldAlert = before > 0 && after <= 0;
         stokItem.stock = after < 0 ? 0 : after;
         stokItem._lastLocalUpdate = new Date().getTime();
+        stockData[stokItem.id] = stokItem;
 
         try {
           if (typeof socket !== "undefined" && socket && socket.connected) {
@@ -1533,6 +1734,20 @@ async function selesaiPesanan(id) {
           }
         } catch (e) {
           console.error("[Stock] Error emitting stock update:", e);
+        }
+
+        if (shouldAlert) {
+          showRealtimeStockAlert(
+            {
+              id: stokItem.id,
+              name: stokItem.name,
+              stock: stokItem.stock,
+            },
+            before,
+            stokItem.stock,
+          );
+          const audio = document.getElementById("warning-sound");
+          audio?.play?.().catch(() => {});
         }
       });
       updateItemDropdown();
@@ -2250,13 +2465,116 @@ function getDaftarPengeluaranTanggal(tanggal) {
 }
 
 function simpanDaftarPengeluaran(list) {
-  localStorage.setItem("kopral_daftar_pengeluaran", JSON.stringify(list));
+  const normalized = Array.isArray(list) ? list : [];
+  localStorage.setItem("kopral_daftar_pengeluaran", JSON.stringify(normalized));
+  return normalized;
 }
 
 function simpanTotalPengeluaran(total) {
   const safeTotal = Math.max(0, parseRupiahValue(total));
   localStorage.setItem("kopral_total_pengeluaran", String(safeTotal));
   return safeTotal;
+}
+
+async function persistPengeluaranToServer(list, meta = {}) {
+  const safeList = simpanDaftarPengeluaran(list);
+  const role =
+    sessionStorage.getItem("kopral_role") ||
+    localStorage.getItem("kopral_role") ||
+    "admin";
+  const backend =
+    typeof KOPRAL_BACKEND !== "undefined"
+      ? KOPRAL_BACKEND
+      : window.location.origin;
+  try {
+    const response = await fetch(`${backend}/api/pengeluaran`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        list: safeList,
+        sourceRole: role,
+        updatedAt: new Date().toISOString(),
+        ...meta,
+      }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data?.success) {
+      throw new Error(data?.message || "Gagal menyimpan pengeluaran ke server");
+    }
+    if (Array.isArray(data?.pengeluaran)) {
+      simpanDaftarPengeluaran(data.pengeluaran);
+      const total = data.pengeluaran.reduce(
+        (sum, item) => sum + parseRupiahValue(item.nominal || 0),
+        0,
+      );
+      simpanTotalPengeluaran(total);
+    }
+    return data;
+  } catch (e) {
+    console.warn("[Pengeluaran] Gagal sinkronisasi ke server:", e);
+    return null;
+  }
+}
+
+async function syncPengeluaranFromServer() {
+  const role =
+    sessionStorage.getItem("kopral_role") ||
+    localStorage.getItem("kopral_role") ||
+    "admin";
+  const backend =
+    typeof KOPRAL_BACKEND !== "undefined"
+      ? KOPRAL_BACKEND
+      : window.location.origin;
+  try {
+    const response = await fetch(
+      `${backend}/api/pengeluaran?role=${encodeURIComponent(role)}`,
+    );
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data?.success || !Array.isArray(data?.pengeluaran)) {
+      return getDaftarPengeluaran();
+    }
+    const list = data.pengeluaran;
+    simpanDaftarPengeluaran(list);
+    const total = list.reduce(
+      (sum, item) => sum + parseRupiahValue(item.nominal || 0),
+      0,
+    );
+    simpanTotalPengeluaran(total);
+    renderTotalPengeluaran();
+    renderDaftarPengeluaran();
+    return list;
+  } catch (e) {
+    console.warn(
+      "[Pengeluaran] Gagal mengambil data pengeluaran dari server:",
+      e,
+    );
+    return getDaftarPengeluaran();
+  }
+}
+
+function applyRemotePengeluaranUpdate(update) {
+  const incoming = Array.isArray(update?.list)
+    ? update.list
+    : Array.isArray(update?.pengeluaran)
+      ? update.pengeluaran
+      : Array.isArray(update)
+        ? update
+        : [];
+  if (!incoming.length && Array.isArray(update?.list)) {
+    return;
+  }
+  simpanDaftarPengeluaran(incoming);
+  const total = incoming.reduce(
+    (sum, item) => sum + parseRupiahValue(item.nominal || 0),
+    0,
+  );
+  simpanTotalPengeluaran(total);
+  renderTotalPengeluaran();
+  renderDaftarPengeluaran();
+  const modal = document.getElementById("modal-hitung");
+  if (modal && modal.classList.contains("flex")) {
+    hitungSelisihPengeluaran();
+  }
 }
 
 function renderTotalPengeluaran() {
@@ -2284,6 +2602,7 @@ function sinkronkanHitungTanggal() {
   omzetValue.dataset.numericValue = String(totalOmzet);
   omzetValue.textContent = `Rp ${totalOmzet.toLocaleString("id-ID")}`;
   renderTotalPengeluaran();
+  renderModalAwalKedaiFromStorage();
   renderDaftarPengeluaran();
   hasilCard.classList.add("hidden");
   hasilValue.textContent = "Rp 0";
@@ -2369,6 +2688,7 @@ function tambahkanPengeluaran() {
   const list = getDaftarPengeluaran();
   list.push({ keterangan, nominal: nilaiBaru, tanggal });
   simpanDaftarPengeluaran(list);
+  persistPengeluaranToServer(list).catch(() => {});
 
   renderTotalPengeluaran();
   renderDaftarPengeluaran();
@@ -2426,6 +2746,7 @@ function editPengeluaran(index) {
       nominal: newNominal,
     };
     simpanDaftarPengeluaran(list);
+    persistPengeluaranToServer(list).catch(() => {});
     renderTotalPengeluaran();
     renderDaftarPengeluaran();
   });
@@ -2439,6 +2760,7 @@ function hapusPengeluaran(index) {
 
   list.splice(index, 1);
   simpanDaftarPengeluaran(list);
+  persistPengeluaranToServer(list).catch(() => {});
   renderTotalPengeluaran();
   renderDaftarPengeluaran();
 }
@@ -2685,7 +3007,7 @@ function toggleModalStok(show) {
 async function prosesStok() {
   const idProduk = document.getElementById("select-produk").value;
   const jumlahBaru = parseInt(document.getElementById("input-stok").value, 10);
-  const produkTerpilih = stockData[idProduk];
+  const produkTerpilih = resolveStockEntry(idProduk) || stockData[idProduk];
 
   if (!idProduk) {
     Swal.fire("Error", "Pilih produk terlebih dahulu!", "error");
@@ -2714,11 +3036,27 @@ async function prosesStok() {
 
     if (!response.ok) throw new Error("Gagal update ke server");
 
+    const previousStock = Number(produkTerpilih?.stock) || 0;
     updateLocalStockState(
       idProduk,
       jumlahBaru,
       produkTerpilih?.name || idProduk,
     );
+
+    if (Number(jumlahBaru) <= 0) {
+      const alertItem = {
+        id: idProduk,
+        name: produkTerpilih?.name || idProduk,
+        stock: Number(jumlahBaru) || 0,
+      };
+      showRealtimeStockAlert(alertItem, previousStock, Number(jumlahBaru));
+      try {
+        const audio = document.getElementById("warning-sound");
+        audio?.play?.().catch(() => {});
+      } catch (e) {
+        console.warn("[Stock] Gagal memutar audio warning:", e);
+      }
+    }
 
     Swal.fire(
       "Berhasil",
