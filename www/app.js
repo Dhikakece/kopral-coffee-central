@@ -1426,18 +1426,190 @@ function getCurrentLocation(timeoutMs = 7000) {
   });
 }
 
+// Improved geolocation: try high-accuracy GPS first, then watch for better fix,
+// finally fallback to IP-based geolocation service when denied or unavailable.
+async function getAccurateLocation(options = {}) {
+  const { timeoutMs = 10000, minAccuracy = 100 } = options || {};
+
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    // fallback to IP lookup
+    try {
+      const r = await fetch("https://ipapi.co/json/");
+      const j = await r.json();
+      if (j && j.latitude && j.longitude) {
+        return {
+          lat: Number(j.latitude),
+          lng: Number(j.longitude),
+          accuracy: null,
+          source: "ip",
+        };
+      }
+    } catch (e) {
+      return null;
+    }
+    return null;
+  }
+
+  // pre-check permission state if supported
+  try {
+    if (navigator.permissions && navigator.permissions.query) {
+      const perm = await navigator.permissions.query({ name: "geolocation" });
+      if (perm.state === "denied") {
+        // user blocked; fallback to IP
+        try {
+          const r = await fetch("https://ipapi.co/json/");
+          const j = await r.json();
+          if (j && j.latitude && j.longitude) {
+            return {
+              lat: Number(j.latitude),
+              lng: Number(j.longitude),
+              accuracy: null,
+              source: "ip",
+            };
+          }
+        } catch (e) {
+          return null;
+        }
+        return null;
+      }
+    }
+  } catch (e) {
+    // ignore permission check errors
+  }
+
+  // Try single high-accuracy fix first
+  const single = await new Promise((resolve) => {
+    let done = false;
+    const t = setTimeout(() => {
+      if (done) return;
+      done = true;
+      resolve(null);
+    }, timeoutMs);
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        if (done) return;
+        done = true;
+        clearTimeout(t);
+        resolve({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          source: "gps",
+        });
+      },
+      (err) => {
+        if (done) return;
+        done = true;
+        clearTimeout(t);
+        resolve(null);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: Math.max(5000, Math.min(timeoutMs, 10000)),
+        maximumAge: 0,
+      },
+    );
+  });
+
+  if (single && (single.accuracy === null || single.accuracy <= minAccuracy)) {
+    return single;
+  }
+
+  // If single fix exists but is not accurate enough, try watchPosition for short period
+  if (navigator.geolocation) {
+    try {
+      const best = await new Promise((resolve) => {
+        let bestPos = single || null;
+        const start = Date.now();
+        const id = navigator.geolocation.watchPosition(
+          (pos) => {
+            const candidate = {
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              source: "gps",
+            };
+            if (
+              !bestPos ||
+              (candidate.accuracy !== null &&
+                candidate.accuracy < (bestPos.accuracy || Infinity))
+            ) {
+              bestPos = candidate;
+            }
+            // stop early if good enough
+            if (
+              candidate.accuracy !== null &&
+              candidate.accuracy <= minAccuracy
+            ) {
+              try {
+                navigator.geolocation.clearWatch(id);
+              } catch (e) {}
+              return resolve(bestPos);
+            }
+            if (Date.now() - start > timeoutMs) {
+              try {
+                navigator.geolocation.clearWatch(id);
+              } catch (e) {}
+              return resolve(bestPos);
+            }
+          },
+          () => {
+            try {
+              navigator.geolocation.clearWatch(id);
+            } catch (e) {}
+            resolve(bestPos);
+          },
+          { enableHighAccuracy: true, maximumAge: 0, timeout: timeoutMs },
+        );
+      });
+
+      if (best) return best;
+    } catch (e) {
+      // fallthrough to IP
+    }
+  }
+
+  // fallback to IP-based location
+  try {
+    const r = await fetch("https://ipapi.co/json/");
+    const j = await r.json();
+    if (j && j.latitude && j.longitude) {
+      return {
+        lat: Number(j.latitude),
+        lng: Number(j.longitude),
+        accuracy: null,
+        source: "ip",
+      };
+    }
+  } catch (e) {
+    // give up
+  }
+  return null;
+}
+
 async function reportLoginActivity(role) {
   try {
-    const location = await getCurrentLocation(7000);
-    const deviceName = `${navigator.platform || "Browser"} - ${navigator.userAgent.split(" ").slice(0, 5).join(" ")}`;
+    const loc = await getAccurateLocation({
+      timeoutMs: 10000,
+      minAccuracy: 100,
+    });
+    const deviceName = `${navigator.platform || "Browser"} - ${navigator.userAgent.split(" ").slice(0, 6).join(" ")}`;
     const payload = {
       deviceName,
       role,
-      location: {
-        place: location ? "Lokasi perangkat" : "Tidak Diketahui",
-        lat: location?.lat,
-        lng: location?.lng,
-      },
+      location: loc
+        ? {
+            place:
+              loc.source === "ip"
+                ? "Lokasi berdasarkan IP"
+                : "Lokasi perangkat",
+            lat: loc.lat,
+            lng: loc.lng,
+            accuracy: loc.accuracy ?? null,
+            source: loc.source || (loc.accuracy ? "gps" : "ip"),
+          }
+        : { place: "Tidak Diketahui" },
     };
 
     await fetch(`${getServerBase()}/api/login-activity`, {
