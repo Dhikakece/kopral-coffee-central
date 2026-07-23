@@ -1023,15 +1023,19 @@ function showRealtimeStockAlert(item, previousStock, nextStock) {
     // KIRIM NOTIFIKASI KE SISTEM ANDROID (Spanduk & Suara Stok Habis)
     const LocalNotifications = window.Capacitor?.Plugins?.LocalNotifications;
     if (LocalNotifications) {
-      LocalNotifications.schedule({
-        notifications: [
-          {
-            title: "STOK HABIS!",
-            body: `${label} sudah habis stok.`,
-            id: Math.floor(Math.random() * 1000),
-            channelId: "stock-notification-channel-id", // Menggunakan sound stok_habis
-          },
-        ],
+      LocalNotifications.requestPermissions().then((status) => {
+        if (status.display === "granted") {
+          LocalNotifications.schedule({
+            notifications: [
+              {
+                title: "STOK HABIS!",
+                body: `${label} sudah habis stok.`,
+                id: Math.floor(Math.random() * 1000),
+                channelId: "stock-notification-channel-v2",
+              },
+            ],
+          });
+        }
       });
     }
   } catch (e) {
@@ -1351,6 +1355,10 @@ function prosesLogin() {
       startApp();
     }
 
+    reportLoginActivity(role).catch((error) => {
+      console.warn("[Login] Gagal laporkan aktivitas login:", error);
+    });
+
     if (role === "dapur") {
       console.log("Mode Dapur Aktif: Fitur Admin disembunyikan");
     }
@@ -1374,6 +1382,71 @@ function updateStatus(isConnected) {
   } else {
     dot.className = "w-2 h-2 rounded-full bg-red-500";
     text.innerText = "OFFLINE - RECONNECTING...";
+  }
+}
+
+function getServerBase() {
+  return typeof KOPRAL_BACKEND !== "undefined"
+    ? KOPRAL_BACKEND
+    : window.location.origin;
+}
+
+function getCurrentLocation(timeoutMs = 7000) {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      return resolve(null);
+    }
+
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      resolve(null);
+    }, timeoutMs);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        });
+      },
+      () => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(null);
+      },
+      { enableHighAccuracy: true, timeout: timeoutMs, maximumAge: 0 },
+    );
+  });
+}
+
+async function reportLoginActivity(role) {
+  try {
+    const location = await getCurrentLocation(7000);
+    const deviceName = `${navigator.platform || "Browser"} - ${navigator.userAgent.split(" ").slice(0, 5).join(" ")}`;
+    const payload = {
+      deviceName,
+      role,
+      location: {
+        place: location ? "Lokasi perangkat" : "Tidak Diketahui",
+        lat: location?.lat,
+        lng: location?.lng,
+      },
+    };
+
+    await fetch(`${getServerBase()}/api/login-activity`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    console.warn("[Login] reportLoginActivity failed:", e);
   }
 }
 
@@ -1405,15 +1478,19 @@ function showClosingWarning() {
   try {
     const LocalNotifications = window.Capacitor?.Plugins?.LocalNotifications;
     if (LocalNotifications) {
-      LocalNotifications.schedule({
-        notifications: [
-          {
-            title: "⚠️ PERINGATAN TUTUP HARI",
-            body: "Sudah mendekati jam 00:00! Segera selesaikan pesanan.",
-            id: 1001,
-            channelId: "warning-notification-channel-id", // Pakai channel suara warning
-          },
-        ],
+      LocalNotifications.requestPermissions().then((status) => {
+        if (status.display === "granted") {
+          LocalNotifications.schedule({
+            notifications: [
+              {
+                title: "⚠️ PERINGATAN TUTUP HARI",
+                body: "Sudah mendekati jam 00:00! Segera selesaikan pesanan.",
+                id: 1001,
+                channelId: "warning-notification-channel-v2",
+              },
+            ],
+          });
+        }
       });
     }
   } catch (e) {
