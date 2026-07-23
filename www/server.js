@@ -235,6 +235,32 @@ function saveModalAwalData(payload) {
   }
 }
 
+function loadLoginActivity() {
+  try {
+    if (!fs.existsSync(LOGIN_ACTIVITY_PATH)) {
+      fs.writeFileSync(LOGIN_ACTIVITY_PATH, JSON.stringify([], null, 2));
+      return [];
+    }
+    const raw = fs.readFileSync(LOGIN_ACTIVITY_PATH, "utf8");
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error("[Server] Gagal membaca login activity:", e);
+    return [];
+  }
+}
+
+function saveLoginActivity(rows) {
+  try {
+    const safeList = Array.isArray(rows) ? rows : [];
+    fs.writeFileSync(LOGIN_ACTIVITY_PATH, JSON.stringify(safeList, null, 2));
+    return safeList;
+  } catch (e) {
+    console.error("[Server] Gagal menyimpan login activity:", e);
+    return [];
+  }
+}
+
 function parseFirebaseServiceAccount(rawValue) {
   if (!rawValue) return null;
   const value = String(rawValue).trim();
@@ -444,6 +470,7 @@ function saveStockCatalog() {
 }
 
 const PENDING_ORDERS_PATH = path.join(__dirname, "data", "pending_orders.json");
+const LOGIN_ACTIVITY_PATH = path.join(__dirname, "data", "login_activity.json");
 
 function loadPendingOrders() {
   try {
@@ -983,6 +1010,78 @@ app.post("/register-device", (req, res) => {
   } catch (e) {
     console.error("[Firebase] register-device error:", e);
     res.status(500).json({ success: false, error: String(e) });
+  }
+});
+
+app.post("/api/login-activity", (req, res) => {
+  try {
+    const payload = req.body || {};
+    const now = new Date().toISOString();
+    const deviceName = String(
+      payload.deviceName ||
+        payload.device ||
+        payload.browser ||
+        payload.userAgent ||
+        "Unknown Device",
+    ).trim();
+    const role = String(payload.role || "unknown").trim();
+    const location = payload.location || {};
+    const place = String(
+      location.place || location.region || location.city || "Tidak Diketahui",
+    ).trim();
+    const coordinates = {
+      lat:
+        Number.isFinite(Number(location.lat)) && location.lat !== ""
+          ? Number(location.lat)
+          : null,
+      lng:
+        Number.isFinite(Number(location.lng)) && location.lng !== ""
+          ? Number(location.lng)
+          : null,
+    };
+
+    const record = {
+      id: `act-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      deviceName,
+      role,
+      loggedAt: now,
+      location: {
+        place,
+        coordinates,
+        raw: location,
+      },
+      endpoint: String(
+        req.ip ||
+          req.headers["x-forwarded-for"] ||
+          req.socket?.remoteAddress ||
+          "",
+      ).trim(),
+      userAgent: String(req.headers["user-agent"] || "").trim(),
+    };
+
+    const activity = loadLoginActivity();
+    activity.unshift(record);
+    saveLoginActivity(activity.slice(0, 200));
+    io.to("admin").emit("login-activity-update", record);
+
+    return res.status(201).json({ success: true, record });
+  } catch (e) {
+    console.error("[Server] Error /api/login-activity:", e);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+});
+
+app.get("/api/login-activity", (req, res) => {
+  try {
+    const activity = loadLoginActivity();
+    return res.status(200).json({ success: true, activity });
+  } catch (e) {
+    console.error("[Server] Error /api/login-activity GET:", e);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 });
 
